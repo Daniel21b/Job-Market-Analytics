@@ -1,4 +1,5 @@
 # Job Market Analytics: AI/ML vs General IT Trends
+# Here is the final report https://daniel21b.github.io/Job-Market-Analytics/
 
 A comprehensive analysis examining the evolution of job postings in the technology sector, comparing AI/Machine Learning roles against traditional General IT positions from October 2023 to October 2024.
 
@@ -197,8 +198,6 @@ This project is available for educational and research purposes.
 For questions or feedback about this analysis, please open an issue in this repository.
 
 ---
-
-**Last Updated:** October 2024  
 **Analysis Period:** October 2023 - October 2024  
 **Total Jobs Analyzed:** 4,137
 
