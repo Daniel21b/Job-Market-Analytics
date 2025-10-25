@@ -1,0 +1,13 @@
+comment_id,company,role,description,has_ai_keywords,is_remote,location,salary,requires_python,requires_js,text_length,month,thread_id,scraped_date
+37741519,I'd argue you're creating a,Not specified,"I'd argue you're creating a bit of a false dichotomy there. I completely agree that the public is bad at measuring risk. But do you disagree that the media/politicians were actively working to exaggerate the impact of the disease? And really this even applied to organizations like the CDC. Read this [1] page and tell me how long you think it'd take the average person to realize they're talking about child hospitalizations
+with
+COVID and not child hospitalizations
+from
+COVID?
+The ""summary"" of the article is that ""COVID-19 can cause severe illness in children and adolescents"" followed by numbers talking about a shocking increase in rates. The fact it's talking about people hospitalized
+with
+COVID is hidden in a wall of text written in language that most people wouldn't be able to decipher. That more people tested positive for a more contagious variant, in any setting, is the most unremarkable news imaginable - spun into a terrifying headline, by the CDC no less.
+I see no way to imagine that article was written in good faith. And it's been the absolute norm for the past 3 years now.
+[1] -
+https://www.cdc.gov/mmwr/volumes/70/wr/mm7036e2.htm",False,False,"variant, in",Not specified,False,False,1154,2023-10,37739795,2025-10-24
+37741203,If the ones who are,Not specified,"If the ones who are supposed to be informing the masses are deliberately feeding them information that leads them to inaccurately measure said risk, then that’s brainwashing.",False,False,Not specified,Not specified,False,False,174,2023-10,37739795,2025-10-24
