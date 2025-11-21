@@ -45,30 +45,58 @@ st.markdown("""
 def load_data():
     """
     Loads and preprocesses the job data.
-    Tries to load from the local path structure provided in the repo.
+    Tries multiple file paths with intelligent fallbacks.
     """
-    # Path based on your repository structure
-    file_path = 'notebooks/data/processed/jobs_with_standardized_companies.csv'
+    file_paths = [
+        'notebooks/data/processed/categorized_jobs.csv',
+        'notebooks/data/processed/jobs_with_standardized_companies.csv',
+        'notebooks/data/processed/jobs_cleaned.csv'
+    ]
     
-    try:
-        df = pd.read_csv(file_path)
-        
-        # Ensure datetime conversion
-        # Checking for common date column names based on your report
-        date_col = 'posting_date' if 'posting_date' in df.columns else 'date'
-        if date_col in df.columns:
-            df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
-            df['Month_Year'] = df[date_col].dt.to_period('M').astype(str)
-            
-        # Fill missing values for categorical display
-        df['role_category'] = df['role_category'].fillna('Unknown')
-        df['company'] = df['company'].fillna('Anonymous')
-        
-        return df, date_col
-        
-    except FileNotFoundError:
-        st.error(f"⚠️ Could not find data at `{file_path}`. Please ensure you are running this script from the root of your repository.")
+    df = None
+    loaded_file = None
+    
+    for file_path in file_paths:
+        try:
+            df = pd.read_csv(file_path)
+            loaded_file = file_path
+            break
+        except FileNotFoundError:
+            continue
+    
+    if df is None or df.empty:
+        st.error(f"⚠️ Could not find data files. Tried: {', '.join(file_paths)}")
+        st.info("💡 Please ensure you are running this from the project root, or run the data processing notebooks first.")
         return pd.DataFrame(), None
+    
+    # Detect date column
+    date_col = None
+    for col_name in ['posting_date', 'date', 'created_date']:
+        if col_name in df.columns:
+            date_col = col_name
+            break
+    
+    if date_col:
+        df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+        df['Month_Year'] = df[date_col].dt.to_period('M').astype(str)
+    
+    # Handle missing role_category column
+    if 'role_category' not in df.columns:
+        st.warning(f"⚠️ Loaded from `{loaded_file}` - missing `role_category` column.")
+        st.info("💡 To enable full analytics, please run notebook `05_job_role_categorization.ipynb` to generate the categorized dataset.")
+        df['role_category'] = 'Uncategorized'
+    else:
+        df['role_category'] = df['role_category'].fillna('Unknown')
+    
+    # Handle company column variants
+    if 'company' in df.columns:
+        df['company'] = df['company'].fillna('Anonymous')
+    elif 'company_clean' in df.columns:
+        df['company'] = df['company_clean'].fillna('Anonymous')
+    else:
+        df['company'] = 'Anonymous'
+    
+    return df, date_col
 
 # --- MAIN APP LOGIC ---
 def main():
@@ -92,8 +120,11 @@ def main():
     if df.empty:
         st.stop()
 
-    # --- PRE-CALCULATE METRICS ---
-    total_jobs = len(df)
+    # Check if data is categorized
+    is_categorized = 'Uncategorized' not in df['role_category'].unique() or len(df['role_category'].unique()) > 1
+    
+    if not is_categorized:
+        st.warning("⚠️ **Data Not Categorized**: Run notebook `05_job_role_categorization.ipynb` to unlock full analytics features.")
     
     # Dynamic Date Filtering
     if date_col:
@@ -276,16 +307,25 @@ def main():
         table_df = df_filtered[df_filtered['role_category'].isin(selected_cat)]
         
         if search_term:
-            table_df = table_df[
-                table_df['company'].str.contains(search_term, case=False) | 
-                table_df['role'].str.contains(search_term, case=False)
-            ]
-            
-        st.dataframe(
-            table_df[['posting_date', 'company', 'role', 'role_category', 'location']].sort_values('posting_date', ascending=False),
-            use_container_width=True,
-            height=500
-        )
+            search_conditions = table_df['company'].str.contains(search_term, case=False, na=False)
+            if 'role' in table_df.columns:
+                search_conditions = search_conditions | table_df['role'].str.contains(search_term, case=False, na=False)
+            table_df = table_df[search_conditions]
+        
+        # Build column list dynamically based on available columns
+        display_cols = []
+        for col in [date_col or 'posting_date', 'company', 'role', 'role_category', 'location']:
+            if col in table_df.columns:
+                display_cols.append(col)
+        
+        if display_cols and date_col in table_df.columns:
+            st.dataframe(
+                table_df[display_cols].sort_values(date_col, ascending=False),
+                use_container_width=True,
+                height=500
+            )
+        else:
+            st.dataframe(table_df, use_container_width=True, height=500)
 
     # --- FOOTER ---
     st.markdown("---")
