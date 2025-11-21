@@ -102,9 +102,9 @@ Clear dichotomy between **AI-First startups** and traditional enterprise IT main
 
 <div align="center">
 
-### Interactive Visualizations
+### Click Here for streamlit Interactive Visualizations
 
-<a href="https://yourusername.github.io/Job-Market-Analytics/">
+<a href="https://job-market-analytics-fx.streamlit.app/">
 <img src="https://img.shields.io/badge/View%20Live%20Dashboard-E34F26?style=for-the-badge&logo=html5&logoColor=white" height="45" alt="View Dashboard"/>
 </a>
 
