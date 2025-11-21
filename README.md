@@ -25,6 +25,25 @@
 </div>
 
 ---
+<div align="center">
+
+### Click Here for streamlit Interactive Visualizations
+
+<a href="https://job-market-analytics-fx.streamlit.app/">
+<img src="https://img.shields.io/badge/View%20Live%20Dashboard-E34F26?style=for-the-badge&logo=html5&logoColor=white" height="45" alt="View Dashboard"/>
+</a>
+
+</div>
+
+<div align="center">
+
+### Click Here for detailed summarization
+
+<a href="https://daniel21b.github.io/Job-Market-Analytics/">
+<img src="https://img.shields.io/badge/View%20Live%20Dashboard-E34F26?style=for-the-badge&logo=html5&logoColor=white" height="45" alt="View Dashboard"/>
+</a>
+
+</div>
 
 ## Overview
 
@@ -100,15 +119,7 @@ Clear dichotomy between **AI-First startups** and traditional enterprise IT main
 </tr>
 </table>
 
-<div align="center">
 
-### Click Here for streamlit Interactive Visualizations
-
-<a href="https://job-market-analytics-fx.streamlit.app/">
-<img src="https://img.shields.io/badge/View%20Live%20Dashboard-E34F26?style=for-the-badge&logo=html5&logoColor=white" height="45" alt="View Dashboard"/>
-</a>
-
-</div>
 
 ---
 
