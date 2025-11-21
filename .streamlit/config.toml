@@ -1,0 +1,26 @@
+[theme]
+primaryColor = "#FF4B4B"
+backgroundColor = "#f9f9f9"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#2c3e50"
+font = "sans serif"
+
+[server]
+headless = true
+port = 8501
+enableCORS = false
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false
+serverAddress = "localhost"
+serverPort = 8501
+
+[runner]
+magicEnabled = true
+fastReruns = true
+
+[client]
+showErrorDetails = true
+toolbarMode = "minimal"
+
