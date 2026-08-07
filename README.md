@@ -1,50 +1,263 @@
 # Distributed Skill Analytics Engine & REST API
 
-A production-style backend for ingesting unstructured job postings, deduplicating reposts with
-PySpark, extracting normalized technology skills, publishing query-ready records to PostgreSQL, and
-serving filterable analytics through FastAPI with Redis cache-aside acceleration.
+An asynchronous backend that turns unstructured job postings into queryable skill-demand metrics.
+The supported runtime uses Python, FastAPI, PySpark, PostgreSQL, Redis, Docker, and an AWS EMR
+Serverless execution adapter. The original notebooks and Streamlit dashboard remain in the
+repository as the legacy analysis surface and migration fixture.
 
-The repository retains the original notebook study for provenance, but the supported runtime is the
-containerized service under `src/skill_analytics`.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white" alt="Python 3.11">
+  <img src="https://img.shields.io/badge/FastAPI-async%20REST-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/PySpark-3.5-E25A1C?logo=apachespark&logoColor=white" alt="PySpark">
+  <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white" alt="Redis">
+  <img src="https://img.shields.io/badge/Docker-containerized-2496ED?logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/AWS-EMR%20Serverless-FF9900?logo=amazonwebservices&logoColor=white" alt="AWS">
+</p>
 
-## Current implementation
+<p align="center">
+  <a href="https://job-market-analytics-fx.streamlit.app/"><strong>Legacy Streamlit dashboard</strong></a>
+  ·
+  <a href="https://daniel21b.github.io/Job-Market-Analytics/"><strong>Legacy analysis report</strong></a>
+  ·
+  <a href="docs/LOCAL_VALIDATION.md"><strong>Validation record</strong></a>
+</p>
 
-- Asynchronous FastAPI service with health, processing-run, and skill-demand endpoints.
-- Redis-backed durable run queue and cache-aside metrics responses.
-- PostgreSQL normalized schema with source/business-key uniqueness and composite filter indexes.
-- PySpark canonicalization, source-redelivery handling, repost classification, skill extraction, and
-  before/after partition-skew metrics.
-- Deterministic publisher from Spark outputs into PostgreSQL, followed by Redis invalidation.
-- Local Docker Compose stack for the API, worker, PostgreSQL, and Redis.
-- AWS adapter for ECS workers to submit PySpark jobs to EMR Serverless, with RDS, ElastiCache, and S3
-  as the production service mapping.
-- Unit, Spark, and PostgreSQL/Redis integration tests in GitHub Actions.
-- Repeatable Spark and API benchmark scripts that produce dated JSON evidence.
+## What is implemented
+
+- Asynchronous FastAPI endpoints for service health, processing-run submission, run status, and
+  multi-attribute skill-demand aggregation.
+- Redis list-backed worker queue plus a cache-aside layer with canonical filter hashing, TTLs, and
+  post-publication invalidation.
+- PySpark canonicalization, pandas-compatible multiline CSV parsing, source-redelivery removal,
+  exact and near-repost classification, partition-skew measurement, composite-key repartitioning,
+  and normalized skill extraction.
+- PostgreSQL run metadata, canonical postings, skills, and posting-to-skill relationships with
+  idempotent upserts and composite indexes for the API filter pattern.
+- Separate non-root API and Java 17/PySpark worker images, with PostgreSQL and Redis wired through
+  Docker Compose health checks.
+- An AWS SDK adapter that submits and monitors EMR Serverless Spark jobs, plus an ECS/RDS/
+  ElastiCache/S3 deployment contract and scoped IAM policy template.
+- GitHub Actions checks for lint, unit tests, PostgreSQL/Redis integration, Spark behavior, and both
+  Docker image builds.
+- Repeatable Spark and API benchmark harnesses that write dated JSON evidence rather than embedding
+  unverified resume metrics.
 
 ## Architecture
 
+### Implemented local execution path
+
 ```mermaid
 flowchart LR
-    A[Raw CSV / JSON / Parquet or S3] --> B[Redis run queue]
-    B --> C[Async Python worker]
-    C --> D[PySpark local or EMR Serverless]
-    D --> E[Canonical postings]
-    D --> F[Duplicate decisions]
-    D --> G[Normalized skill matches]
-    E --> H[(PostgreSQL / RDS)]
-    G --> H
-    H --> I[FastAPI metrics]
-    I <--> J[(Redis / ElastiCache)]
+    Client["API client"] -->|"POST /v1/runs"| API["FastAPI service"]
+    API -->|"create run metadata"| PG[("PostgreSQL 16")]
+    API -->|"LPUSH run message"| Queue[("Redis run queue")]
+    Queue -->|"BRPOP"| Worker["Async Python worker"]
+    Worker -->|"spawn processing job"| Spark["PySpark 3.5"]
+    Raw["CSV, JSON, or Parquet input"] --> Spark
+    Taxonomy["Versioned skill taxonomy"] --> Spark
+    Spark --> Canonical["Canonical postings"]
+    Spark --> Duplicates["Duplicate decisions"]
+    Spark --> Matches["Normalized skill matches"]
+    Spark --> Metrics["Run and partition metrics"]
+    Canonical --> Publisher["Transactional publisher"]
+    Matches --> Publisher
+    Publisher -->|"idempotent upserts"| PG
+    Publisher -->|"invalidate metric keys"| Cache[("Redis cache")]
+    PG -->|"aggregate on cache miss"| API
+    Cache <-->|"cache-aside responses"| API
 ```
 
-The deduplication contract distinguishes source redelivery from a repost. Repost candidates are
-grouped by a high-cardinality SHA-256 key derived from normalized company, title, and location, then
-compared within a bounded time window. Optimized runs repartition by that key and record partition
-row counts and skew ratios before and after the transformation.
+The API and worker are deliberately separated. API requests stay lightweight while the worker owns
+the blocking Spark lifecycle. The processing run in PostgreSQL is the durable status record; Redis
+contains the queue message and cached query responses.
+
+### Processing lifecycle
+
+```mermaid
+sequenceDiagram
+    participant C as "Client"
+    participant A as "FastAPI"
+    participant P as "PostgreSQL"
+    participant R as "Redis"
+    participant W as "Worker"
+    participant S as "PySpark"
+
+    C->>A: "POST /v1/runs"
+    A->>P: "INSERT processing_runs (queued)"
+    A->>R: "LPUSH run message"
+    A-->>C: "202 Accepted + run UUID"
+    W->>R: "BRPOP run message"
+    W->>P: "UPDATE status = running"
+    W->>S: "Execute local Spark job"
+    S->>S: "Normalize, deduplicate, repartition, extract skills"
+    S-->>W: "Parquet, publish JSON, metrics JSON"
+    W->>P: "UPSERT postings, skills, and bridge rows"
+    W->>R: "Invalidate skill-demand cache keys"
+    W->>P: "UPDATE status = succeeded + metrics"
+    C->>A: "GET /v1/runs/{run_id}"
+    A->>P: "SELECT processing run"
+    A-->>C: "Status, counts, timing, and evidence"
+```
+
+If Spark or publication fails, the worker records a terminal `failed` state and a bounded,
+parameter-hidden error in `processing_runs`. Automatic retry and dead-letter handling are not yet
+implemented; a new run must currently be submitted after the underlying cause is corrected.
+
+### Spark transformation stages
+
+| Stage | Input | Operation | Output |
+|---|---|---|---|
+| Read | CSV, JSON, or Parquet | Multiline/double-quote-safe ingestion and row reconciliation | Raw Spark DataFrame |
+| Canonicalize | Source-specific columns | Normalize company, title, location, role, timestamps, source ID, and remote flag | Canonical schema |
+| Source delivery filter | `(source, source_record_id)` | Retain the latest observation; label earlier deliveries | `source_redelivery` decisions |
+| Repartition | Canonical postings | Hash normalized company, title, and location into a high-cardinality join key | Balanced Spark partitions |
+| Repost comparison | Keyed postings | Compare adjacent postings with content hashes, bounded dates, and Levenshtein similarity | Exact/near repost decisions |
+| Skill extraction | Canonical descriptions + taxonomy | Tokenize, generate 1–4-grams, broadcast the taxonomy, and join on normalized aliases | Posting-to-skill matches |
+| Evidence | Before/after DataFrames | Count rows, matches, distinct skills, partition sizes, skew ratios, and duration | `pipeline_metrics.json` |
+| Publish | Canonical and match outputs | Write Parquet artifacts and compact JSON records for PostgreSQL publication | Curated output tree |
+
+The optimized path repartitions on `composite_join_key` before the window comparison. Every run
+captures both pre- and post-transformation partition profiles so performance claims can be tied to
+the same immutable input and configuration.
+
+### PostgreSQL data model
+
+```mermaid
+erDiagram
+    PROCESSING_RUNS {
+        uuid id PK
+        varchar status
+        text input_uri
+        text output_uri
+        boolean optimized
+        integer input_rows
+        integer output_rows
+        integer duplicate_rows
+        integer skill_count
+        integer duration_ms
+        jsonb metrics
+        text error
+    }
+
+    JOB_POSTINGS {
+        uuid id PK
+        varchar source
+        varchar source_record_id
+        varchar company_normalized
+        varchar title_normalized
+        varchar location_normalized
+        varchar role_family
+        text description
+        char content_hash
+        char composite_join_key
+        boolean is_remote
+        timestamptz posted_at
+        timestamptz observed_at
+    }
+
+    SKILLS {
+        bigint id PK
+        varchar slug UK
+        varchar canonical_name
+        varchar category
+    }
+
+    JOB_POSTING_SKILLS {
+        uuid posting_id PK,FK
+        bigint skill_id PK,FK
+        varchar matched_alias
+    }
+
+    JOB_POSTINGS ||--o{ JOB_POSTING_SKILLS : "has"
+    SKILLS ||--o{ JOB_POSTING_SKILLS : "matched by"
+```
+
+The publisher derives deterministic posting UUIDs and uses PostgreSQL `ON CONFLICT` upserts, making
+republication of the same source record idempotent.
+
+Key query and integrity indexes:
+
+| Index or constraint | Columns | Purpose |
+|---|---|---|
+| `uq_job_posting_source_record` | `source, source_record_id` | Prevent duplicate source deliveries |
+| `ix_job_postings_content_hash` | `content_hash` | Support exact-content investigation |
+| `ix_job_postings_composite_key_posted` | `composite_join_key, posted_at` | Support repost history lookup |
+| `ix_job_postings_filters` | `role_family, location_normalized, posted_at` | Match the API’s multi-filter access pattern |
+| `ix_job_posting_skills_skill_posting` | `skill_id, posting_id` | Accelerate skill-to-posting aggregation |
+
+### Redis responsibilities
+
+Redis serves two independent namespaces:
+
+1. `skill-analytics:runs` stores serialized run messages consumed by the worker with `BRPOP`.
+2. `skill-analytics:metrics:skill-demand:<sha256>` stores cache-aside responses. The SHA-256 suffix
+   is computed from sorted, canonical JSON filters so logically identical requests share a key.
+
+Metrics use a configurable TTL and all skill-demand keys are invalidated only after the PostgreSQL
+publication transaction commits.
+
+### Docker service topology
+
+| Service | Image/runtime | Responsibility | Dependency |
+|---|---|---|---|
+| `api` | Python 3.11 slim, non-root | FastAPI REST service on port 8000 | Healthy PostgreSQL and Redis |
+| `worker` | Python 3.11 + Java 17 + PySpark, non-root | Queue consumer, Spark execution, publication | Healthy API, PostgreSQL, and Redis |
+| `postgres` | PostgreSQL 16 Alpine | Durable run and analytics store | Migration mounted at initialization |
+| `redis` | Redis 7 Alpine with AOF | Run queue and response cache | Persistent Docker volume |
+
+The `.dockerignore` excludes the legacy notebooks, data, virtual environment, tests, and Git history
+from production build contexts. Java is linked through an architecture-neutral path, so the worker
+image builds on AMD64 and ARM64.
+
+### AWS deployment target
+
+```mermaid
+flowchart TB
+    Internet["API clients"] --> ALB["Application Load Balancer"]
+    ALB --> APIService["ECS Fargate: FastAPI"]
+    APIService --> RDS[("RDS PostgreSQL")]
+    APIService <--> ElastiCache[("ElastiCache for Redis")]
+    ElastiCache --> WorkerService["ECS Fargate: worker"]
+    WorkerService --> EMR["EMR Serverless application"]
+    RawBucket[("S3 raw prefix")] --> EMR
+    CodeBucket[("S3 packaged Spark entrypoint and taxonomy")] --> EMR
+    EMR --> CuratedBucket[("S3 curated, logs, and evidence prefixes")]
+    WorkerService --> Logs["CloudWatch Logs"]
+    APIService --> Logs
+    Secrets["Secrets Manager"] --> APIService
+    Secrets --> WorkerService
+```
+
+The checked-in AWS adapter implements EMR Serverless submission and terminal-state polling. The
+repository also provides the task-role IAM contract and required configuration. Provisioning ECS,
+RDS, ElastiCache, S3, networking, Secrets Manager, and the downstream S3-to-PostgreSQL publication
+step remains an environment-specific deployment task; no cloud resources are created by this repo.
+
+See [`infra/aws/README.md`](infra/aws/README.md) and
+[`infra/aws/emr-worker-policy.json`](infra/aws/emr-worker-policy.json).
+
+## REST API
+
+Interactive OpenAPI documentation is available at `http://localhost:8000/docs`.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/health` | Verify PostgreSQL and Redis readiness |
+| `POST` | `/v1/runs` | Persist and enqueue a Spark processing run |
+| `GET` | `/v1/runs/{run_id}` | Return status, counts, duration, metrics, and failure details |
+| `GET` | `/v1/metrics/skill-demand` | Aggregate posting counts by skill, role, location, and date range |
+
+The metrics endpoint accepts `skill`, `role_family`, `location`, `start_date`, and `end_date`.
+Responses include `X-Cache: hit|miss` and `Server-Timing` headers.
+
+```bash
+curl 'http://localhost:8000/v1/metrics/skill-demand?skill=python&role_family=uncategorized&location=seattle%20wa'
+```
 
 ## Quick start
 
-Requirements: Docker Desktop with Compose.
+Requirements: Docker with the Compose plugin.
 
 ```bash
 cp .env.example .env
@@ -52,7 +265,7 @@ docker compose up --build -d
 curl http://localhost:8000/health
 ```
 
-Submit the checked-in cleaned artifact to the asynchronous worker:
+Submit the checked-in migration fixture:
 
 ```bash
 curl -X POST http://localhost:8000/v1/runs \
@@ -64,45 +277,53 @@ curl -X POST http://localhost:8000/v1/runs \
   }'
 ```
 
-The response contains a run UUID. Poll it with:
+Poll the returned UUID:
 
 ```bash
 curl http://localhost:8000/v1/runs/RUN_ID
 ```
 
-## REST API
-
-Interactive OpenAPI documentation is available at `http://localhost:8000/docs`.
-
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/health` | PostgreSQL and Redis readiness |
-| `POST` | `/v1/runs` | Queue a Spark processing run |
-| `GET` | `/v1/runs/{run_id}` | Inspect status, counts, duration, and evidence |
-| `GET` | `/v1/metrics/skill-demand` | Aggregate posting counts by skill, role, and location |
-
-The metrics endpoint accepts `skill`, `role_family`, `location`, `start_date`, and `end_date` query
-parameters. Responses include `X-Cache: hit|miss` and `Server-Timing`; Redis keys are stable hashes of
-canonicalized filters and are invalidated after successful publication.
-
-Example:
+Stop the stack without deleting its named volumes:
 
 ```bash
-curl 'http://localhost:8000/v1/metrics/skill-demand?skill=python&role_family=data%20engineer&location=nyc'
+docker compose down
 ```
 
-## Skill taxonomy
+## Configuration
 
-`config/skill_taxonomy.csv` is a starter taxonomy used for development. Production runs should set
-`MINIMUM_CANONICAL_SKILLS=500`; the pipeline fails closed when the taxonomy contains fewer distinct
-canonical skills than the configured threshold. Aliases do not count as canonical skills.
+Configuration is loaded from environment variables or `.env` through `pydantic-settings`.
 
-A 500+ claim requires a versioned, reviewed taxonomy and a dated processing manifest proving the
-number of distinct canonical skills actually matched in the retained dataset.
+| Area | Important variables |
+|---|---|
+| Service | `APP_ENV`, `LOG_LEVEL`, `AUTO_CREATE_SCHEMA` |
+| PostgreSQL | `DATABASE_URL` |
+| Redis | `REDIS_URL`, `QUEUE_NAME`, `CACHE_TTL_SECONDS` |
+| Spark | `SPARK_MASTER_URL`, `SPARK_PARTITIONS`, `SPARK_INPUT_URI`, `SPARK_OUTPUT_URI` |
+| Taxonomy | `SKILL_TAXONOMY_PATH`, `MINIMUM_CANONICAL_SKILLS` |
+| Execution | `EXECUTION_BACKEND=local` or `emr-serverless` |
+| AWS | `AWS_REGION`, EMR application/role/entrypoint/log URIs, and S3 bucket settings |
 
-## Performance evidence
+Production runs should set `MINIMUM_CANONICAL_SKILLS=500`. The pipeline fails closed when the
+taxonomy has fewer distinct canonical skills than the configured minimum. The development taxonomy
+is intentionally smaller and cannot substantiate a 500+ matched-skill claim.
 
-Run baseline and repartitioned Spark jobs against the same immutable input:
+## Development and verification
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+make install
+make lint
+make test
+```
+
+With PostgreSQL and Redis running:
+
+```bash
+make test-integration
+```
+
+Benchmark baseline and repartitioned Spark runs against the same immutable input:
 
 ```bash
 python benchmarks/run_spark_benchmark.py \
@@ -114,82 +335,90 @@ python benchmarks/run_spark_benchmark.py \
   --repeats 5
 ```
 
-Measure the warm Redis cache path:
+Measure the populated warm-cache path:
 
 ```bash
 python benchmarks/run_api_benchmark.py \
-  --url 'http://localhost:8000/v1/metrics/skill-demand?skill=python&location=nyc' \
+  --url 'http://localhost:8000/v1/metrics/skill-demand?skill=python&location=seattle%20wa' \
   --requests 100 \
   --output evidence/api_benchmark.json
 ```
 
-The scripts record raw timings, medians/p95, configuration, and whether the stated target was met.
-They do not manufacture a 40-to-12-minute or sub-50ms result.
+## Validated local result
 
-The latest local validation processed the checked-in 4,137-row fixture end to end and measured a
-1.989 ms warm-cache p95 over 100 populated, multi-attribute requests. This proves the implementation
-path, not the proposed 120,000-row production-scale claim. See `docs/LOCAL_VALIDATION.md`.
+The latest local end-to-end run used the checked-in migration fixture:
 
-## Resume-claim gates
+| Metric | Result |
+|---|---:|
+| Input rows | 4,137 |
+| Canonical postings | 4,135 |
+| Duplicate decisions | 2 |
+| Matched canonical skills | 65 |
+| Skill-match rows | 2,164 |
+| Optimized local duration | 17.627 seconds |
+| Partition skew ratio | 1.644 → 1.060 |
+| Populated cache benchmark | 0.898 ms p50, 1.989 ms p95, 100/100 hits |
+
+Full environment and measurement details are recorded in
+[`docs/LOCAL_VALIDATION.md`](docs/LOCAL_VALIDATION.md).
+
+## Resume-claim evidence gates
 
 | Proposed result | Required evidence | Current status |
 |---|---|---|
-| 120,000+ postings | Immutable input manifest and reconciled input/output counts | Not yet measured; local fixture has 4,137 rows |
-| 18% repost removal | Persisted duplicate decisions with an explicit denominator | Not supported by local fixture: 2 of 4,137 rows |
-| 500+ skills | Versioned taxonomy plus distinct matched canonical-skill count | Not yet supported; local run matched 65 canonical skills |
-| 40 to 12 minutes | Five or more same-input baseline/optimized runs and Spark partition profiles | Not yet measured; one optimized local run took 17.6 seconds |
-| Sub-50ms filters | Warm-cache p95 from the API benchmark against a populated database | Locally met: 1.989 ms p95, 100/100 cache hits, 4,135 postings |
+| 120,000+ postings | Immutable input manifest and reconciled input/output counts | Not measured; local fixture has 4,137 rows |
+| 18% repost removal | Persisted duplicate decisions with an explicit denominator | Not supported locally: 2 of 4,137 rows |
+| 500+ skills | Versioned taxonomy and distinct matched canonical-skill count | Not supported locally: 65 matched skills |
+| 40 to 12 minutes | Five or more same-input baseline/optimized runs | Not measured; one optimized local run took 17.627 seconds |
+| Sub-50 ms filters | Warm-cache p95 against populated tables | Met locally: 1.989 ms p95 over 100 cache hits |
 
-Use the measured values when they differ from the proposed resume language.
+Use measured values when they differ from proposed resume language.
 
-## AWS production mapping
-
-Set `EXECUTION_BACKEND=emr-serverless` on the worker to submit processing jobs through the AWS SDK.
-The intended production topology is:
-
-- API and worker images in ECR, running on ECS Fargate.
-- PostgreSQL on private RDS and Redis on private ElastiCache.
-- Raw, curated, log, and benchmark prefixes in S3.
-- PySpark on EMR Serverless.
-- Secrets Manager for runtime secrets and CloudWatch for service/job logs.
-
-See `infra/aws/README.md` and the scoped worker IAM policy template. Cloud execution requires a real
-AWS account, provisioned resources, and an S3-packaged Spark entry point.
-
-## Development
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-make install
-make lint
-make test
-```
-
-Run integration tests while PostgreSQL and Redis are available:
-
-```bash
-docker compose up -d postgres redis
-make test-integration
-```
-
-## Repository map
+## Repository structure
 
 ```text
-src/skill_analytics/       FastAPI, queue worker, publisher, Spark, and AWS adapters
-config/                    Versioned skill taxonomy
-db/migrations/             PostgreSQL schema and composite indexes
-docker/                    API and worker images
-benchmarks/                Spark and API measurement harnesses
-infra/aws/                 AWS topology and IAM contract
-tests/                     Unit, Spark, and service integration tests
-notebooks/                 Legacy acquisition and analysis notebooks
-docs/                      Upgrade plan and supporting design documentation
+Job-Market-Analytics/
+├── src/skill_analytics/
+│   ├── api/
+│   │   ├── dependencies.py       # Database, Redis, cache, and settings injection
+│   │   └── routes/               # Health, run lifecycle, and metrics endpoints
+│   ├── aws/
+│   │   └── emr_serverless.py     # EMR Serverless submit-and-poll adapter
+│   ├── spark/
+│   │   ├── job.py                # Spark session, I/O, artifacts, and run metrics
+│   │   ├── pipeline.py           # Canonicalization, deduplication, skew, and skills
+│   │   ├── normalization.py      # Deterministic text and composite-key helpers
+│   │   └── taxonomy.py           # Taxonomy loading and validation
+│   ├── cache.py                  # Redis cache keys, TTL, and invalidation
+│   ├── config.py                 # Typed environment configuration
+│   ├── database.py               # Async SQLAlchemy engine and sessions
+│   ├── main.py                   # FastAPI application lifecycle
+│   ├── models.py                 # PostgreSQL ORM schema and indexes
+│   ├── publisher.py              # Spark-output-to-PostgreSQL upserts
+│   ├── repository.py             # Processing-run and skill-demand queries
+│   ├── schemas.py                # API request and response contracts
+│   ├── services.py               # Queue and cache-aside orchestration
+│   └── worker.py                 # Redis consumer and execution backend selection
+├── config/skill_taxonomy.csv     # Versioned canonical skills and aliases
+├── db/migrations/                # PostgreSQL DDL and composite indexes
+├── docker/                       # API and Java 17/PySpark worker images
+├── benchmarks/                   # Repeatable Spark and API evidence harnesses
+├── infra/aws/                    # AWS deployment contract and worker IAM policy
+├── tests/unit/                   # Fast unit and Spark behavior tests
+├── tests/integration/            # PostgreSQL/Redis service-stack test
+├── notebooks/                    # Legacy acquisition and analysis workflow
+├── docs/                         # Architecture plan and local validation record
+├── docker-compose.yml            # Local four-service topology
+├── pyproject.toml                # Package, dependency, lint, and test configuration
+└── .github/workflows/ci.yml      # GitHub Actions quality gates
 ```
 
-## Legacy data warning
+## Legacy data and security notes
 
-The checked-in legacy artifact contains 4,137 cleaned rows: 3,608 Adzuna and 529 Hacker News. Its
-material dates are May 2024, October 2024, and October 2025, so it cannot support a continuous
-longitudinal claim. It is useful as a migration fixture, not as evidence for the proposed scale and
-performance results.
+The checked-in fixture contains 4,137 cleaned rows: 3,608 Adzuna and 529 Hacker News. Its material
+dates are May 2024, October 2024, and October 2025, so it is a useful migration fixture—not evidence
+of continuous eight-month history or production scale.
+
+The current notebook reads Adzuna credentials from `ADZUNA_APP_ID` and `ADZUNA_API_KEY`. A credential
+that appeared in earlier Git history should still be revoked and replaced; this upgrade does not
+rewrite published history.
