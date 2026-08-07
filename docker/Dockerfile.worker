@@ -1,0 +1,22 @@
+FROM python:3.11-slim-bookworm AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    JAVA_HOME=/opt/java
+
+WORKDIR /app
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends openjdk-17-jre-headless \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s "/usr/lib/jvm/java-17-openjdk-$(dpkg --print-architecture)" "$JAVA_HOME" \
+    && groupadd --system app \
+    && useradd --system --gid app app
+
+COPY pyproject.toml README.md ./
+COPY src ./src
+COPY config ./config
+RUN pip install --no-cache-dir '.[spark]'
+
+RUN mkdir -p /data/input /data/output && chown -R app:app /data /app
+USER app
+CMD ["skill-analytics-worker"]

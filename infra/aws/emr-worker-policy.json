@@ -1,0 +1,21 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SubmitSkillAnalyticsJobs",
+      "Effect": "Allow",
+      "Action": [
+        "emr-serverless:StartJobRun",
+        "emr-serverless:GetJobRun",
+        "emr-serverless:CancelJobRun"
+      ],
+      "Resource": "arn:aws:emr-serverless:REGION:ACCOUNT_ID:/applications/APPLICATION_ID"
+    },
+    {
+      "Sid": "PassEmrExecutionRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "EMR_EXECUTION_ROLE_ARN"
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "distributed-skill-analytics"
+version = "0.1.0"
+description = "Distributed job-posting normalization and skill-demand analytics API"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "asyncpg>=0.29,<1",
+  "boto3>=1.35,<2",
+  "fastapi>=0.115,<1",
+  "pydantic-settings>=2.5,<3",
+  "redis>=5,<7",
+  "sqlalchemy[asyncio]>=2.0,<3",
+  "structlog>=24,<26",
+  "uvicorn[standard]>=0.30,<1",
+]
+
+[project.optional-dependencies]
+spark = [
+  "numpy>=1.26,<3",
+  "pyspark>=3.5,<4",
+]
+dev = [
+  "asgi-lifespan>=2.1,<3",
+  "fakeredis>=2.25,<3",
+  "httpx>=0.27,<1",
+  "mypy>=1.11,<2",
+  "pytest>=8,<9",
+  "pytest-asyncio>=0.24,<1",
+  "ruff>=0.8,<1",
+]
+legacy = [
+  "altair>=5,<6",
+  "beautifulsoup4>=4.12,<5",
+  "jupyter>=1,<2",
+  "matplotlib>=3.7,<4",
+  "numpy>=1.24,<3",
+  "pandas>=2,<3",
+  "plotly>=5.17,<7",
+  "python-dotenv>=1,<2",
+  "requests>=2.31,<3",
+  "scipy>=1.10,<2",
+  "seaborn>=0.12,<1",
+  "streamlit>=1.28,<2",
+]
+
+[project.scripts]
+skill-analytics-api = "skill_analytics.main:run"
+skill-analytics-worker = "skill_analytics.worker:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+asyncio_mode = "auto"
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = [
+  "integration: requires PostgreSQL and Redis",
+  "spark: requires Java and PySpark",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]

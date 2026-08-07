@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: skill_analytics
+          POSTGRES_USER: skill_analytics
+          POSTGRES_PASSWORD: skill_analytics
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U skill_analytics -d skill_analytics"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql+asyncpg://skill_analytics:skill_analytics@localhost:5432/skill_analytics
+      REDIS_URL: redis://localhost:6379/0
+      AUTO_CREATE_SCHEMA: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -e '.[dev,spark]'
+      - name: Lint
+        run: ruff check src tests benchmarks
+      - name: Unit tests
+        run: pytest -m 'not integration and not spark'
+      - name: PostgreSQL and Redis integration tests
+        run: pytest -m integration
+      - name: Spark tests
+        run: pytest -m spark
+      - name: Build API image
+        run: docker build -f docker/Dockerfile.api -t skill-analytics-api:test .
+      - name: Build worker image
+        run: docker build -f docker/Dockerfile.worker -t skill-analytics-worker:test .

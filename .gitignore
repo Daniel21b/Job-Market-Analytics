@@ -55,5 +55,10 @@ venv.bak/
 # Logs
 *.log
 
+# Runtime data and generated evidence
+data/
+evidence/*.json
+evidence/spark/
+
 # OS
 Thumbs.db

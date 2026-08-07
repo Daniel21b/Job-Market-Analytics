@@ -1,418 +1,195 @@
-<div align="center">
-<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=0,51,102,0,153,204&height=220&section=header&text=Job%20Market%20Analytics&fontSize=42&fontColor=fff&animation=fadeIn&fontAlignY=40" alt="Header Banner" width="100%">
+# Distributed Skill Analytics Engine & REST API
 
-<p align="center">
-  <a href="#overview"><img src="https://img.shields.io/badge/Overview-blue?style=for-the-badge" alt="Overview"/></a>
-  <a href="#key-findings"><img src="https://img.shields.io/badge/Key%20Findings-orange?style=for-the-badge" alt="Key Findings"/></a>
-  <a href="#tech-stack"><img src="https://img.shields.io/badge/Tech%20Stack-green?style=for-the-badge" alt="Tech Stack"/></a>
-  <a href="#workflow"><img src="https://img.shields.io/badge/Workflow-purple?style=for-the-badge" alt="Workflow"/></a>
-  <a href="#installation"><img src="https://img.shields.io/badge/Installation-red?style=for-the-badge" alt="Installation"/></a>
-</p>
+A production-style backend for ingesting unstructured job postings, deduplicating reposts with
+PySpark, extracting normalized technology skills, publishing query-ready records to PostgreSQL, and
+serving filterable analytics through FastAPI with Redis cache-aside acceleration.
 
-<h3>AI vs. General IT: The Hiring Shift</h3>
-<p><em>Quantifying the Evolution of Tech Talent Through Data Science</em></p>
+The repository retains the original notebook study for provenance, but the supported runtime is the
+containerized service under `src/skill_analytics`.
 
-<p>
-  <img src="https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"/>
-  <img src="https://img.shields.io/badge/Jupyter-Notebook-F37626?style=flat-square&logo=jupyter&logoColor=white" alt="Jupyter"/>
-  <img src="https://img.shields.io/badge/Pandas-Data%20Analysis-150458?style=flat-square&logo=pandas&logoColor=white" alt="Pandas"/>
-  <img src="https://img.shields.io/badge/Status-Active-success?style=flat-square" alt="Status"/>
-  <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License"/>
-</p>
+## Current implementation
 
-<img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/People/Technologist.png" width="150px" alt="Technologist Animation"/>
+- Asynchronous FastAPI service with health, processing-run, and skill-demand endpoints.
+- Redis-backed durable run queue and cache-aside metrics responses.
+- PostgreSQL normalized schema with source/business-key uniqueness and composite filter indexes.
+- PySpark canonicalization, source-redelivery handling, repost classification, skill extraction, and
+  before/after partition-skew metrics.
+- Deterministic publisher from Spark outputs into PostgreSQL, followed by Redis invalidation.
+- Local Docker Compose stack for the API, worker, PostgreSQL, and Redis.
+- AWS adapter for ECS workers to submit PySpark jobs to EMR Serverless, with RDS, ElastiCache, and S3
+  as the production service mapping.
+- Unit, Spark, and PostgreSQL/Redis integration tests in GitHub Actions.
+- Repeatable Spark and API benchmark scripts that produce dated JSON evidence.
 
-</div>
-
----
-
-## Overview
-
-<table>
-<tr>
-<td width="60%">
-
-A **longitudinal data science study** analyzing **4,100+ job postings** to decode the recruitment battle between emerging AI/ML roles and traditional IT positions.
-
-### Mission
-Validate the growth of AI/ML in the hiring landscape through statistical rigor, moving beyond anecdotal evidence to answer: **Is the AI/ML market actually outpacing traditional IT?**
-
-### Timeline
-**October 2023 → October 2024**
-
-### Data Sources
-- **Hacker News "Who is Hiring?" Threads**
-- **Adzuna API** (Job Market Analytics)
-- **4,100+ Validated Job Postings**
-
-</td>
-<td width="40%">
-
-<div align="center">
+## Architecture
 
 ```mermaid
-pie title Job Categories Distribution
-    "AI/ML" : 35
-    "General IT" : 40
-    "Hybrid Roles" : 18
-    "Non-Tech" : 7
+flowchart LR
+    A[Raw CSV / JSON / Parquet or S3] --> B[Redis run queue]
+    B --> C[Async Python worker]
+    C --> D[PySpark local or EMR Serverless]
+    D --> E[Canonical postings]
+    D --> F[Duplicate decisions]
+    D --> G[Normalized skill matches]
+    E --> H[(PostgreSQL / RDS)]
+    G --> H
+    H --> I[FastAPI metrics]
+    I <--> J[(Redis / ElastiCache)]
 ```
 
-</div>
+The deduplication contract distinguishes source redelivery from a repost. Repost candidates are
+grouped by a high-cardinality SHA-256 key derived from normalized company, title, and location, then
+compared within a bounded time window. Optimized runs repartition by that key and record partition
+row counts and skew ratios before and after the transformation.
 
-</td>
-</tr>
-</table>
+## Quick start
 
----
-
-## Key Findings
-
-<table>
-<tr>
-<td width="33%" align="center">
-<img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Chart%20Increasing.png" width="60px"/>
-
-### Growth Trajectory
-**AI/ML roles showed 42% YoY growth** with distinct hiring spikes, while General IT maintained a steadier baseline
-
-<img src="https://img.shields.io/badge/Trend-Upward-success?style=for-the-badge" alt="Upward"/>
-
-</td>
-<td width="33%" align="center">
-<img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Test%20Tube.png" width="60px"/>
-
-### Hybrid Bridge
-**MLOps, AI Platform Engineers** emerged as the fastest-growing category, blending infrastructure with ML deployment
-
-<img src="https://img.shields.io/badge/Category-Emerging-orange?style=for-the-badge" alt="Emerging"/>
-
-</td>
-<td width="33%" align="center">
-<img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Office%20Building.png" width="60px"/>
-
-### Market Polarization
-Clear dichotomy between **AI-First startups** and traditional enterprise IT maintenance roles
-
-<img src="https://img.shields.io/badge/Pattern-Bifurcated-blue?style=for-the-badge" alt="Bifurcated"/>
-
-</td>
-</tr>
-</table>
-
-<div align="center">
-
-### Interactive Visualizations
-
-<a href="https://yourusername.github.io/Job-Market-Analytics/">
-<img src="https://img.shields.io/badge/View%20Live%20Dashboard-E34F26?style=for-the-badge&logo=html5&logoColor=white" height="45" alt="View Dashboard"/>
-</a>
-
-</div>
-
----
-
-## Tech Stack
-
-<div align="center">
-
-### Data Acquisition Layer
-<img src="https://img.shields.io/badge/BeautifulSoup-Web%20Scraping-009688?style=for-the-badge&logo=python&logoColor=white" alt="BeautifulSoup"/>
-<img src="https://img.shields.io/badge/Requests-HTTP%20Library-FF6F00?style=for-the-badge&logo=python&logoColor=white" alt="Requests"/>
-<img src="https://img.shields.io/badge/Adzuna-API%20Integration-0052CC?style=for-the-badge&logo=api&logoColor=white" alt="Adzuna API"/>
-<img src="https://img.shields.io/badge/Selenium-Automation-43B02A?style=for-the-badge&logo=selenium&logoColor=white" alt="Selenium"/>
-
-### Analysis & Processing
-<img src="https://img.shields.io/badge/Pandas-Data%20Manipulation-150458?style=for-the-badge&logo=pandas&logoColor=white" alt="Pandas"/>
-<img src="https://img.shields.io/badge/NumPy-Numerical%20Computing-013243?style=for-the-badge&logo=numpy&logoColor=white" alt="NumPy"/>
-<img src="https://img.shields.io/badge/SciPy-Statistical%20Tests-8CAAE6?style=for-the-badge&logo=scipy&logoColor=white" alt="SciPy"/>
-<img src="https://img.shields.io/badge/Statsmodels-Regression-4B8BBE?style=for-the-badge&logo=python&logoColor=white" alt="Statsmodels"/>
-
-### Visualization & Reporting
-<img src="https://img.shields.io/badge/Matplotlib-Plotting-11557c?style=for-the-badge&logo=python&logoColor=white" alt="Matplotlib"/>
-<img src="https://img.shields.io/badge/Seaborn-Statistical%20Graphics-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Seaborn"/>
-<img src="https://img.shields.io/badge/Plotly-Interactive%20Charts-3F4F75?style=for-the-badge&logo=plotly&logoColor=white" alt="Plotly"/>
-<img src="https://img.shields.io/badge/Jupyter-Notebooks-F37626?style=for-the-badge&logo=jupyter&logoColor=white" alt="Jupyter"/>
-
-</div>
-
----
-
-## Analysis Workflow
-
-<div align="center">
-
-```mermaid
-graph LR
-    A[Web Scraping] --> B[API Collection]
-    B --> C[Data Cleaning]
-    C --> D[Categorization]
-    D --> E[Statistical Analysis]
-    E --> F[Visualization]
-    F --> G[Report Generation]
-    
-    style A fill:#FF6B6B
-    style B fill:#4ECDC4
-    style C fill:#45B7D1
-    style D fill:#FFA07A
-    style E fill:#98D8C8
-    style F fill:#F7DC6F
-    style G fill:#BB8FCE
-```
-
-</div>
-
-<br>
-
-<table>
-<tr>
-<th width="20%">Stage</th>
-<th width="50%">Description</th>
-<th width="30%">Key Technologies</th>
-</tr>
-
-<tr>
-<td><b>Web Scraping</b></td>
-<td>Extracts monthly "Who is hiring?" threads from Hacker News covering Oct '23 - Oct '24 with retry logic and rate limiting</td>
-<td><code>BeautifulSoup</code> <code>Requests</code></td>
-</tr>
-
-<tr>
-<td><b>API Collection</b></td>
-<td>Fetches supplementary dataset via Adzuna API with pagination handling, authentication, and error recovery</td>
-<td><code>REST API</code> <code>JSON</code></td>
-</tr>
-
-<tr>
-<td><b>Data Refining</b></td>
-<td>Deduplication algorithms, datetime standardization, null-value imputation, and outlier detection</td>
-<td><code>Pandas</code> <code>NumPy</code></td>
-</tr>
-
-<tr>
-<td><b>Smart Categorization</b></td>
-<td>Machine learning-powered keyword scoring system classifying roles into AI/ML, General IT, Hybrid, or Non-Tech</td>
-<td><code>NLP</code> <code>Regex</code></td>
-</tr>
-
-<tr>
-<td><b>Statistical Tests</b></td>
-<td>Linear regression modeling, Mann-Kendall trend tests, Pearson correlations, and hypothesis testing</td>
-<td><code>SciPy</code> <code>Statsmodels</code></td>
-</tr>
-
-<tr>
-<td><b>Visualization</b></td>
-<td>Interactive time-series plots, heatmaps, distribution analyses, and comparative dashboards</td>
-<td><code>Plotly</code> <code>Seaborn</code></td>
-</tr>
-
-<tr>
-<td><b>Final Reporting</b></td>
-<td>Aggregation of insights into a deployable HTML executive summary with embedded visualizations</td>
-<td><code>HTML/CSS</code> <code>Jinja2</code></td>
-</tr>
-
-</table>
-
----
-
-## Installation
-
-<table>
-<tr>
-<td width="50%">
-
-### Quick Start
+Requirements: Docker Desktop with Compose.
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/Job-Market-Analytics.git
-
-# Navigate to directory
-cd Job-Market-Analytics
-
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Launch Jupyter
-jupyter notebook
+cp .env.example .env
+docker compose up --build -d
+curl http://localhost:8000/health
 ```
 
-</td>
-<td width="50%">
+Submit the checked-in cleaned artifact to the asynchronous worker:
 
-### Requirements
-
-**Python 3.8+** required
-
-**Core Dependencies:**
-- `pandas >= 1.3.0`
-- `numpy >= 1.21.0`
-- `beautifulsoup4 >= 4.10.0`
-- `requests >= 2.26.0`
-- `matplotlib >= 3.4.0`
-- `seaborn >= 0.11.0`
-- `plotly >= 5.0.0`
-- `scipy >= 1.7.0`
-- `statsmodels >= 0.13.0`
-- `jupyter >= 1.0.0`
-
-**API Keys Needed:**
-- Adzuna API credentials
-
-</td>
-</tr>
-</table>
-
-### Configuration
-
-Create a `.env` file in the root directory:
-
-```env
-ADZUNA_APP_ID=your_app_id_here
-ADZUNA_API_KEY=your_api_key_here
+```bash
+curl -X POST http://localhost:8000/v1/runs \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_uri": "/data/legacy/processed/jobs_cleaned.csv",
+    "output_uri": "/data/output/legacy-baseline",
+    "optimized": true
+  }'
 ```
 
----
+The response contains a run UUID. Poll it with:
 
-## Project Structure
-
-```
-Job-Market-Analytics/
-│
-├── notebooks/
-│   ├── 01_data_collection.ipynb
-│   ├── 02_data_cleaning.ipynb
-│   ├── 03_categorization.ipynb
-│   ├── 04_statistical_analysis.ipynb
-│   └── 05_visualization.ipynb
-│
-├── data/
-│   ├── raw/                    # Unprocessed data
-│   ├── processed/              # Cleaned datasets
-│   └── outputs/                # Final results
-│
-├── src/
-│   ├── scraper.py              # Web scraping utilities
-│   ├── api_handler.py          # API integration
-│   ├── preprocessor.py         # Data cleaning
-│   ├── categorizer.py          # Job classification
-│   └── analyzer.py             # Statistical functions
-│
-├── visualizations/
-│   ├── static/                 # PNG/SVG exports
-│   └── interactive/            # HTML dashboards
-│
-├── reports/
-│   └── executive_summary.html
-│
-├── requirements.txt
-├── .env.example
-└── README.md
+```bash
+curl http://localhost:8000/v1/runs/RUN_ID
 ```
 
----
+## REST API
 
-## Sample Results
+Interactive OpenAPI documentation is available at `http://localhost:8000/docs`.
 
-<div align="center">
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/health` | PostgreSQL and Redis readiness |
+| `POST` | `/v1/runs` | Queue a Spark processing run |
+| `GET` | `/v1/runs/{run_id}` | Inspect status, counts, duration, and evidence |
+| `GET` | `/v1/metrics/skill-demand` | Aggregate posting counts by skill, role, and location |
 
-### Monthly Hiring Trends Comparison
+The metrics endpoint accepts `skill`, `role_family`, `location`, `start_date`, and `end_date` query
+parameters. Responses include `X-Cache: hit|miss` and `Server-Timing`; Redis keys are stable hashes of
+canonicalized filters and are invalidated after successful publication.
 
-<img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Bar%20Chart.png" width="80px"/>
+Example:
 
-</div>
-
-| Month | AI/ML Jobs | General IT | Hybrid Roles | Growth Rate |
-|:------|:----------:|:----------:|:------------:|:-----------:|
-| Oct 2023 | 245 | 412 | 89 | — |
-| Jan 2024 | 298 | 438 | 107 | +21.6% |
-| Apr 2024 | 341 | 451 | 128 | +14.4% |
-| Jul 2024 | 389 | 465 | 156 | +14.1% |
-| Oct 2024 | 447 | 478 | 184 | +14.9% |
-
-<div align="center">
-
-**AI/ML Growth: +82.4% YoY | General IT Growth: +16.0% YoY | Hybrid Roles: +106.7% YoY**
-
-</div>
-
----
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-<div align="center">
-
-```mermaid
-graph LR
-    A[Fork Repository] --> B[Create Branch]
-    B --> C[Make Changes]
-    C --> D[Commit]
-    D --> E[Push]
-    E --> F[Pull Request]
-    
-    style A fill:#FFB6C1
-    style F fill:#90EE90
+```bash
+curl 'http://localhost:8000/v1/metrics/skill-demand?skill=python&role_family=data%20engineer&location=nyc'
 ```
 
-</div>
+## Skill taxonomy
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+`config/skill_taxonomy.csv` is a starter taxonomy used for development. Production runs should set
+`MINIMUM_CANONICAL_SKILLS=500`; the pipeline fails closed when the taxonomy contains fewer distinct
+canonical skills than the configured threshold. Aliases do not count as canonical skills.
 
----
+A 500+ claim requires a versioned, reviewed taxonomy and a dated processing manifest proving the
+number of distinct canonical skills actually matched in the retained dataset.
 
-## License
+## Performance evidence
 
-<div align="center">
+Run baseline and repartitioned Spark jobs against the same immutable input:
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+```bash
+python benchmarks/run_spark_benchmark.py \
+  --input-uri data/input/jobs.parquet \
+  --taxonomy-path config/skill_taxonomy.csv \
+  --output-root evidence/spark \
+  --master 'local[*]' \
+  --partitions 8 \
+  --repeats 5
+```
 
-<img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="MIT License"/>
+Measure the warm Redis cache path:
 
-</div>
+```bash
+python benchmarks/run_api_benchmark.py \
+  --url 'http://localhost:8000/v1/metrics/skill-demand?skill=python&location=nyc' \
+  --requests 100 \
+  --output evidence/api_benchmark.json
+```
 
----
+The scripts record raw timings, medians/p95, configuration, and whether the stated target was met.
+They do not manufacture a 40-to-12-minute or sub-50ms result.
 
-## Author
+The latest local validation processed the checked-in 4,137-row fixture end to end and measured a
+1.989 ms warm-cache p95 over 100 populated, multi-attribute requests. This proves the implementation
+path, not the proposed 120,000-row production-scale claim. See `docs/LOCAL_VALIDATION.md`.
 
-<div align="center">
+## Resume-claim gates
 
-<img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Waving%20Hand.png" width="60px"/>
+| Proposed result | Required evidence | Current status |
+|---|---|---|
+| 120,000+ postings | Immutable input manifest and reconciled input/output counts | Not yet measured; local fixture has 4,137 rows |
+| 18% repost removal | Persisted duplicate decisions with an explicit denominator | Not supported by local fixture: 2 of 4,137 rows |
+| 500+ skills | Versioned taxonomy plus distinct matched canonical-skill count | Not yet supported; local run matched 65 canonical skills |
+| 40 to 12 minutes | Five or more same-input baseline/optimized runs and Spark partition profiles | Not yet measured; one optimized local run took 17.6 seconds |
+| Sub-50ms filters | Warm-cache p95 from the API benchmark against a populated database | Locally met: 1.989 ms p95, 100/100 cache hits, 4,135 postings |
 
-### Daniel Berhane
+Use the measured values when they differ from the proposed resume language.
 
-**Data Scientist | ML Engineer | Analytics Enthusiast**
+## AWS production mapping
 
-<a href="https://linkedin.com/in/daniel-berhane">
-<img src="https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/>
-</a>
-<a href="https://github.com/yourusername">
-<img src="https://img.shields.io/badge/GitHub-Follow-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/>
-</a>
-<a href="mailto:your.email@example.com">
-<img src="https://img.shields.io/badge/Email-Contact-D14836?style=for-the-badge&logo=gmail&logoColor=white" alt="Email"/>
-</a>
+Set `EXECUTION_BACKEND=emr-serverless` on the worker to submit processing jobs through the AWS SDK.
+The intended production topology is:
 
----
+- API and worker images in ECR, running on ECS Fargate.
+- PostgreSQL on private RDS and Redis on private ElastiCache.
+- Raw, curated, log, and benchmark prefixes in S3.
+- PySpark on EMR Serverless.
+- Secrets Manager for runtime secrets and CloudWatch for service/job logs.
 
-### Star this repository if you found it helpful!
+See `infra/aws/README.md` and the scoped worker IAM policy template. Cloud execution requires a real
+AWS account, provisioned resources, and an S3-packaged Spark entry point.
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=0,51,102,0,153,204&height=100&section=footer&fontSize=0&animation=fadeIn" width="100%">
+## Development
 
-**Made with love and coffee by Daniel **
+```bash
+python -m venv .venv
+source .venv/bin/activate
+make install
+make lint
+make test
+```
+
+Run integration tests while PostgreSQL and Redis are available:
+
+```bash
+docker compose up -d postgres redis
+make test-integration
+```
+
+## Repository map
+
+```text
+src/skill_analytics/       FastAPI, queue worker, publisher, Spark, and AWS adapters
+config/                    Versioned skill taxonomy
+db/migrations/             PostgreSQL schema and composite indexes
+docker/                    API and worker images
+benchmarks/                Spark and API measurement harnesses
+infra/aws/                 AWS topology and IAM contract
+tests/                     Unit, Spark, and service integration tests
+notebooks/                 Legacy acquisition and analysis notebooks
+docs/                      Upgrade plan and supporting design documentation
+```
+
+## Legacy data warning
+
+The checked-in legacy artifact contains 4,137 cleaned rows: 3,608 Adzuna and 529 Hacker News. Its
+material dates are May 2024, October 2024, and October 2025, so it cannot support a continuous
+longitudinal claim. It is useful as a migration fixture, not as evidence for the proposed scale and
+performance results.

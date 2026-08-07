@@ -1,0 +1,89 @@
+canonical_skill,alias,category
+python,python,languages
+python,python3,languages
+java,java,languages
+javascript,javascript,languages
+javascript,js,languages
+typescript,typescript,languages
+typescript,ts,languages
+go,go,languages
+go,golang,languages
+rust,rust,languages
+c++,c++,languages
+c#,c#,languages
+sql,sql,languages
+scala,scala,languages
+r,r language,languages
+bash,bash,languages
+powershell,powershell,languages
+html,html,web
+css,css,web
+react,react,web
+react,react.js,web
+next.js,next.js,web
+vue.js,vue.js,web
+angular,angular,web
+node.js,node.js,web
+fastapi,fastapi,backend
+django,django,backend
+flask,flask,backend
+spring boot,spring boot,backend
+.net,.net,backend
+graphql,graphql,backend
+rest api,rest api,backend
+grpc,grpc,backend
+pandas,pandas,data
+numpy,numpy,data
+apache spark,apache spark,data
+apache spark,pyspark,data
+apache flink,apache flink,data
+apache kafka,apache kafka,data
+apache airflow,apache airflow,data
+dbt,dbt,data
+airbyte,airbyte,data
+snowflake,snowflake,data
+bigquery,bigquery,data
+redshift,redshift,data
+databricks,databricks,data
+postgresql,postgresql,databases
+postgresql,postgres,databases
+mysql,mysql,databases
+sql server,sql server,databases
+mongodb,mongodb,databases
+redis,redis,databases
+elasticsearch,elasticsearch,databases
+duckdb,duckdb,databases
+aws,aws,cloud
+amazon s3,amazon s3,cloud
+amazon s3,s3,cloud
+aws lambda,aws lambda,cloud
+aws lambda,lambda,cloud
+amazon ecs,amazon ecs,cloud
+amazon emr,amazon emr,cloud
+amazon rds,amazon rds,cloud
+google cloud,gcp,cloud
+google cloud,google cloud,cloud
+azure,azure,cloud
+docker,docker,platform
+kubernetes,kubernetes,platform
+kubernetes,k8s,platform
+terraform,terraform,platform
+ansible,ansible,platform
+github actions,github actions,platform
+jenkins,jenkins,platform
+prometheus,prometheus,observability
+grafana,grafana,observability
+opentelemetry,opentelemetry,observability
+machine learning,machine learning,ml
+deep learning,deep learning,ml
+natural language processing,natural language processing,ml
+natural language processing,nlp,ml
+computer vision,computer vision,ml
+pytorch,pytorch,ml
+tensorflow,tensorflow,ml
+scikit-learn,scikit-learn,ml
+scikit-learn,sklearn,ml
+hugging face,hugging face,ml
+large language models,large language models,ml
+large language models,llm,ml
+mlops,mlops,ml
