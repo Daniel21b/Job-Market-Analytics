@@ -1,0 +1,15 @@
+{
+  "reconciliation_passed": true,
+  "input_rows": 120000,
+  "canonical_rows": 107330,
+  "duplicate_rows": 12670,
+  "duplicate_reasons": {
+    "exact_repost": 7810,
+    "near_repost": 4860
+  },
+  "database_counts": {
+    "job_postings": 107330,
+    "skills": 73,
+    "job_posting_skills": 40001
+  }
+}

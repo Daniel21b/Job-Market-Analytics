@@ -344,9 +344,15 @@ python benchmarks/run_api_benchmark.py \
   --output evidence/api_benchmark.json
 ```
 
-## Validated local result
+## October 2026 real-posting benchmark
 
-The latest local end-to-end run used the checked-in migration fixture:
+The actual pipeline processed **120,000 real postings**, retained **107,330** canonical records, flagged **12,670 heuristic duplicate candidates (10.56%)**, and produced **40,001 matches across 73 skills**. Python-skill HTTP requests measured **0.858 ms warm-cache p95** (1,000 sequential requests) and **9.368 ms cache-miss p95** (100 requests) locally.
+
+[Read the dated benchmark, limitations, and reproducibility instructions](docs/BENCHMARK_2026-10-25.md). This October follow-up supersedes the older fixture for current résumé claims; it does not establish historical 2025 measurements.
+
+## Historical fixture result
+
+The earlier local end-to-end run used the checked-in migration fixture:
 
 | Metric | Result |
 |---|---:|
@@ -366,11 +372,11 @@ Full environment and measurement details are recorded in
 
 | Proposed result | Required evidence | Current status |
 |---|---|---|
-| 120,000+ postings | Immutable input manifest and reconciled input/output counts | Not measured; local fixture has 4,137 rows |
-| 18% repost removal | Persisted duplicate decisions with an explicit denominator | Not supported locally: 2 of 4,137 rows |
-| 500+ skills | Versioned taxonomy and distinct matched canonical-skill count | Not supported locally: 65 matched skills |
-| 40 to 12 minutes | Five or more same-input baseline/optimized runs | Not measured; one optimized local run took 17.627 seconds |
-| Sub-50 ms filters | Warm-cache p95 against populated tables | Met locally: 1.989 ms p95 over 100 cache hits |
+| 120,000+ postings | Immutable input manifest and reconciled input/output counts | Measured exactly 120,000 real input records in October 2026 |
+| 18% repost removal | Persisted duplicate decisions with an explicit denominator | Not supported: 12,670 of 120,000 candidates (10.56%) |
+| 500+ skills | Versioned taxonomy and distinct matched canonical-skill count | Not supported: 73 matched skills |
+| 40 to 12 minutes | Five or more same-input baseline/optimized runs | Not measured; October Spark run took 467.244 seconds |
+| Sub-50 ms filters | Warm-cache p95 against populated tables | Met locally for Python skill: 0.858 ms p95 over 1,000 cache hits |
 
 Use measured values when they differ from proposed resume language.
 

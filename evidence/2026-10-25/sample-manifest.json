@@ -1,0 +1,116 @@
+{
+  "revision": "7675a78a63ea3d42d47515a350ac7650da972bd0",
+  "dataset": "scholarweave/Jobs-Dataset-v2",
+  "frozen_at": "2026-10-25T18:03:22.398063+00:00",
+  "source_as_of": "2026-10-25T16:29:33.600029+00:00",
+  "selection": "Numeric shard order, original row order, stop at target; convenience sample, not representative.",
+  "filters": "United States; nonempty title/company/source ID; description >=200 characters; source posted date 2025-01-01 through snapshot timestamp; unique source posting IDs.",
+  "mapping": "Stable source company IDs used as company identity; SHA256 of posting ID as source_record_id; location is country only because minimal source lacks consistent city/region. Original posting ID and source URL retained in frozen input.",
+  "limitations": "Source posted_at values are unverified. Upstream active snapshot may already be deduplicated. Country-only location may conflate distinct local openings; duplicate decisions are heuristic candidates, not audited true reposts. No future dates or synthetic records included.",
+  "selected_rows": 120000,
+  "selected_posted_years": {
+    "2026": 92136,
+    "2025": 27864
+  },
+  "filter_counts": {
+    "examined": 465116,
+    "short_or_missing_description": 153160,
+    "outside_date_range_or_missing": 81077,
+    "not_us": 110853,
+    "missing_identity": 26
+  },
+  "shards": [
+    {
+      "bytes": 18723612,
+      "path": "data/active/minimal/current/shard_0000.parquet",
+      "sha256": "f59a1d29f0c4315e7658dcebca5e40a4bf4585a9989c1ba9b5f049731cccd52e"
+    },
+    {
+      "bytes": 18771727,
+      "path": "data/active/minimal/current/shard_0001.parquet",
+      "sha256": "fc19fb5979fdebfd25974a317755766f63e4dcafc75169da1c773d0d3a5fc15b"
+    },
+    {
+      "bytes": 18861017,
+      "path": "data/active/minimal/current/shard_0002.parquet",
+      "sha256": "0502403c690e7a358a150d166db59fed4ad6beadc2441907cb5e1f05d318481b"
+    },
+    {
+      "bytes": 19024247,
+      "path": "data/active/minimal/current/shard_0003.parquet",
+      "sha256": "852f8027b23cb4d484de5ff64b410779288404545d6293be850aad3da17c5e83"
+    },
+    {
+      "bytes": 18977707,
+      "path": "data/active/minimal/current/shard_0004.parquet",
+      "sha256": "6904efc134796b2170010ed6f41543a2c1a0266fafe87b8d89c3fe3b81497d3e"
+    },
+    {
+      "bytes": 18657621,
+      "path": "data/active/minimal/current/shard_0005.parquet",
+      "sha256": "d0d0e7b12053e7d0a43672a99be9511f15a6e61c795f5a09bb14b4f5d11e33ed"
+    },
+    {
+      "bytes": 18641763,
+      "path": "data/active/minimal/current/shard_0006.parquet",
+      "sha256": "8b647ed44c090964178ff36fad0c16fcc252a219399e519f79b1dc6684d75db8"
+    },
+    {
+      "bytes": 19012688,
+      "path": "data/active/minimal/current/shard_0007.parquet",
+      "sha256": "76d9c22e1636b987ce570c3e5c9272054199daa4d9233dc7283f587eb66b3924"
+    },
+    {
+      "bytes": 18868930,
+      "path": "data/active/minimal/current/shard_0008.parquet",
+      "sha256": "d6e3e23fab61bb8b1e303b03a319e096a0e6b2edd8d400d0379d91c4c73defe7"
+    },
+    {
+      "bytes": 18821009,
+      "path": "data/active/minimal/current/shard_0009.parquet",
+      "sha256": "cebab6d9c8ddaa357ff54df0c8678924b7b66ec6c2834d0f88af01aa76b34124"
+    },
+    {
+      "bytes": 18812846,
+      "path": "data/active/minimal/current/shard_0010.parquet",
+      "sha256": "eb6fe9d10d0f57b71ab56b2719bd6770a372f094e628f150874b24b6995d3b28"
+    },
+    {
+      "bytes": 18825306,
+      "path": "data/active/minimal/current/shard_0011.parquet",
+      "sha256": "100e0caf3ebc96876247f4694872402cbf13bdb50467b685fe89567e43f8b0eb"
+    },
+    {
+      "bytes": 18897046,
+      "path": "data/active/minimal/current/shard_0012.parquet",
+      "sha256": "7b4dcc35d61b48d5d02d78f81e55218711e78f82c6d06a6d452856497fb741e1"
+    },
+    {
+      "bytes": 18787721,
+      "path": "data/active/minimal/current/shard_0013.parquet",
+      "sha256": "65f4ff83a1dec47266d435580b6a50ed379948bc7909915b0f1ca3bd91c95ab3"
+    },
+    {
+      "bytes": 19081633,
+      "path": "data/active/minimal/current/shard_0014.parquet",
+      "sha256": "bdbb9d67a6852b139d70ae592c6b6652039eaf094c40567c583d87541fe35af6"
+    },
+    {
+      "bytes": 18858303,
+      "path": "data/active/minimal/current/shard_0015.parquet",
+      "sha256": "abba9191e0095eeacc8706b32cd77fd29361454b8afd264b205423a7a4fecd8a"
+    },
+    {
+      "bytes": 18883132,
+      "path": "data/active/minimal/current/shard_0016.parquet",
+      "sha256": "f0efebf5e62bc50e8d4bc1317fbdc0e62905547a08ebfb879eef6960950bebed"
+    },
+    {
+      "bytes": 19182392,
+      "path": "data/active/minimal/current/shard_0017.parquet",
+      "sha256": "b084a2f0084ae5a8480072b0b8bb6e38ea67a70e583c1dbb634afdb9851f8ed8"
+    }
+  ],
+  "sample_sha256": "641c7d6e11ff8c7bc217e6f1036c8dd6907a00e908053e12f9b78013133a5d11",
+  "sample_bytes": 142124353
+}
