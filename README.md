@@ -346,9 +346,9 @@ python benchmarks/run_api_benchmark.py \
 
 ## October 2026 real-posting benchmark
 
-The actual pipeline processed **120,000 real postings**, retained **107,330** canonical records, flagged **12,670 heuristic duplicate candidates (10.56%)**, and produced **40,001 matches across 73 skills**. Python-skill HTTP requests measured **0.858 ms warm-cache p95** (1,000 sequential requests) and **9.368 ms cache-miss p95** (100 requests) locally.
+The expanded actual pipeline run processed **200,000 real postings**, retained **174,361** canonical records, flagged **25,639 heuristic duplicate candidates (12.82%)**, and produced **66,339 matches across 73 skills**. Python-skill HTTP requests measured **0.833 ms warm-cache p95** (1,000 sequential requests) and **11.309 ms cache-miss p95** (100 requests) locally. Unfiltered cache misses measured **52.090 ms p95**; a blanket sub-50 ms guarantee is not supported.
 
-[Read the dated benchmark, limitations, and reproducibility instructions](docs/BENCHMARK_2026-10-25.md). This October follow-up supersedes the older fixture for current résumé claims; it does not establish historical 2025 measurements.
+[Read the expanded benchmark and reproduction instructions](docs/BENCHMARK_2026-10-26.md). The [original 120,000-record run](docs/BENCHMARK_2026-10-25.md) is preserved. These overlapping samples contain 200,000 unique source IDs in total, not 320,000. Original project dates and October follow-up measurements remain separate.
 
 ## Historical fixture result
 
@@ -372,11 +372,11 @@ Full environment and measurement details are recorded in
 
 | Proposed result | Required evidence | Current status |
 |---|---|---|
-| 120,000+ postings | Immutable input manifest and reconciled input/output counts | Measured exactly 120,000 real input records in October 2026 |
-| 18% repost removal | Persisted duplicate decisions with an explicit denominator | Not supported: 12,670 of 120,000 candidates (10.56%) |
+| 120,000+ postings | Immutable input manifest and reconciled input/output counts | Measured 200,000 real input records in October 2026 |
+| 18% repost removal | Persisted duplicate decisions with an explicit denominator | Not supported: 25,639 of 200,000 candidates (12.82%) |
 | 500+ skills | Versioned taxonomy and distinct matched canonical-skill count | Not supported: 73 matched skills |
-| 40 to 12 minutes | Five or more same-input baseline/optimized runs | Not measured; October Spark run took 467.244 seconds |
-| Sub-50 ms filters | Warm-cache p95 against populated tables | Met locally for Python skill: 0.858 ms p95 over 1,000 cache hits |
+| 40 to 12 minutes | Five or more same-input baseline/optimized runs | Not measured; October Spark run took 1,130.362 seconds |
+| Sub-50 ms filters | Warm-cache p95 against populated tables | Met locally for Python skill: 0.833 ms p95 over 1,000 cache hits |
 
 Use measured values when they differ from proposed resume language.
 

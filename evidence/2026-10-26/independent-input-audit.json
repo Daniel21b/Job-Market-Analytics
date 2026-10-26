@@ -1,0 +1,10 @@
+{
+  "rows": 200000,
+  "unique_source_ids": 200000,
+  "min_posted_at": "2025-01-01T00:00:00+00:00",
+  "max_posted_at": "2026-10-25T14:51:32+00:00",
+  "minimum_description_characters": 200,
+  "sha256": "9dbee9fd46a77fd2576415b96061b1480a098bebf7e9b4b7e419974a6a983d1a",
+  "previous_sample_is_subset": true,
+  "additional_unique_records": 80000
+}
