@@ -1,0 +1,18 @@
+{
+  "rows": 120000,
+  "unique_source_ids": 120000,
+  "unique_original_ids": 120000,
+  "minimum_description_characters": 200,
+  "earliest_source_posted_at": "2025-01-01T00:00:00+00:00",
+  "latest_source_posted_at": "2026-10-25T14:51:32+00:00",
+  "sample_sha256": "641c7d6e11ff8c7bc217e6f1036c8dd6907a00e908053e12f9b78013133a5d11",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "architecture": "arm64",
+  "python": "3.11.11",
+  "logical_cpus": 10,
+  "physical_memory_gib": 24,
+  "spark_master": "local[4]",
+  "spark_driver_memory": "4g",
+  "spark_partitions": 8,
+  "pipeline_commit": "d300415fc9d09e321b39cf7a9078c6abf548c194"
+}
