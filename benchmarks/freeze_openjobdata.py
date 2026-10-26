@@ -92,7 +92,7 @@ def main():
             break
     if len(selected) < args.target:
         raise ValueError(f"Only {len(selected)} eligible rows; target not reached")
-    dest = args.data_dir / "postings-120000.parquet"
+    dest = args.data_dir / f"postings-{args.target}.parquet"
     pq.write_table(pa.Table.from_pylist(selected), dest, compression="zstd")
     report = {
         **meta,

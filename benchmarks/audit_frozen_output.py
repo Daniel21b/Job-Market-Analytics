@@ -15,10 +15,11 @@ args = parser.parse_args()
 r = args.evidence
 o = args.output_dir
 m = json.loads((r / "run-completed.json").read_text())["metrics"]
+expected = json.loads((r / "sample-manifest.json").read_text())["selected_rows"]
 c = pq.read_table(o / "canonical_job_postings", columns=["posting_key"])
 d = pq.read_table(o / "duplicate_decisions", columns=["duplicate_reason"])
 s = pq.read_table(o / "job_skill_matches", columns=["canonical_skill"])
-assert c.num_rows + d.num_rows == m["input_rows"] == 120000
+assert c.num_rows + d.num_rows == m["input_rows"] == expected
 assert c.num_rows == m["output_rows"] and d.num_rows == m["duplicate_rows"]
 assert s.num_rows == m["skill_match_rows"]
 assert len(set(s["canonical_skill"].to_pylist())) == m["canonical_skill_count"]
@@ -40,7 +41,7 @@ async def check():
 
 result = {
     "reconciliation_passed": True,
-    "input_rows": 120000,
+    "input_rows": expected,
     "canonical_rows": c.num_rows,
     "duplicate_rows": d.num_rows,
     "duplicate_reasons": dict(Counter(d["duplicate_reason"].to_pylist())),
