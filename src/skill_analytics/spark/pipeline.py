@@ -70,15 +70,9 @@ def canonicalize(raw: DataFrame) -> DataFrame:
         frame.withColumn(
             "company_normalized", F.substring(_normalized(F.col("company_raw")), 1, 256)
         )
-        .withColumn(
-            "title_normalized", F.substring(_normalized(F.col("title_raw")), 1, 256)
-        )
-        .withColumn(
-            "location_normalized", F.substring(_normalized(F.col("location_raw")), 1, 256)
-        )
-        .withColumn(
-            "role_family", F.substring(_normalized(F.col("role_family_raw")), 1, 96)
-        )
+        .withColumn("title_normalized", F.substring(_normalized(F.col("title_raw")), 1, 256))
+        .withColumn("location_normalized", F.substring(_normalized(F.col("location_raw")), 1, 256))
+        .withColumn("role_family", F.substring(_normalized(F.col("role_family_raw")), 1, 96))
         .withColumn("is_remote", F.lower(F.col("is_remote_raw")).isin("true", "1", "yes"))
         .withColumn("description_normalized", _normalized(F.col("description")))
         .withColumn(
@@ -124,9 +118,7 @@ def canonicalize(raw: DataFrame) -> DataFrame:
                 ),
             ),
         )
-        .withColumn(
-            "posting_key", F.sha2(F.concat_ws("|", "source", "source_record_id"), 256)
-        )
+        .withColumn("posting_key", F.sha2(F.concat_ws("|", "source", "source_record_id"), 256))
         .withColumn(
             "content_hash",
             F.sha2(
@@ -143,9 +135,7 @@ def canonicalize(raw: DataFrame) -> DataFrame:
         .withColumn(
             "composite_join_key",
             F.sha2(
-                F.concat_ws(
-                    "|", "company_normalized", "title_normalized", "location_normalized"
-                ),
+                F.concat_ws("|", "company_normalized", "title_normalized", "location_normalized"),
                 256,
             ),
         )
@@ -177,23 +167,39 @@ def classify_duplicates(frame: DataFrame, config: PipelineConfig) -> tuple[DataF
         .withColumn("previous_description", F.lag("description_normalized").over(history))
         .withColumn("previous_posted_at", F.lag("posted_at").over(history))
         .withColumn(
-            "description_similarity",
+            "days_since_previous",
+            F.datediff(F.to_date("posted_at"), F.to_date("previous_posted_at")),
+        )
+        .withColumn(
+            "bounded_distance",
             F.when(
-                F.col("previous_description").isNotNull(),
-                F.lit(1.0)
-                - (
-                    F.levenshtein("description_normalized", "previous_description")
-                    / F.greatest(
-                        F.length("description_normalized"),
-                        F.length("previous_description"),
-                        F.lit(1),
-                    )
+                (F.col("content_hash") != F.col("previous_content_hash"))
+                & F.col("days_since_previous").between(0, config.duplicate_window_days),
+                # Round up to avoid excluding a boundary candidate due to float rounding.
+                # The original similarity predicate below still decides acceptance.
+                F.expr(
+                    "levenshtein(description_normalized, previous_description, "
+                    "cast(ceil((1.0 - "
+                    + str(float(config.duplicate_similarity_threshold))
+                    + ") * greatest(length(description_normalized), "
+                    "length(previous_description), 1)) as int))"
                 ),
             ),
         )
         .withColumn(
-            "days_since_previous",
-            F.datediff(F.to_date("posted_at"), F.to_date("previous_posted_at")),
+            "description_similarity",
+            F.when(F.col("content_hash") == F.col("previous_content_hash"), F.lit(1.0))
+            .when(
+                F.col("bounded_distance") >= 0,
+                F.lit(1.0)
+                - F.col("bounded_distance")
+                / F.greatest(
+                    F.length("description_normalized"),
+                    F.length("previous_description"),
+                    F.lit(1),
+                ),
+            )
+            .otherwise(F.lit(0.0)),
         )
         .withColumn(
             "duplicate_reason",
@@ -224,6 +230,7 @@ def classify_duplicates(frame: DataFrame, config: PipelineConfig) -> tuple[DataF
     )
     duplicates = delivery_duplicates.unionByName(repost_duplicates)
     canonical = compared.filter(F.col("duplicate_reason").isNull()).drop(
+        "bounded_distance",
         "previous_posting_key",
         "previous_content_hash",
         "previous_description",
@@ -245,7 +252,8 @@ def extract_skill_matches(
     from pyspark.sql import functions as F
 
     taxonomy = (
-        spark.read.option("header", True).csv(taxonomy_path)
+        spark.read.option("header", True)
+        .csv(taxonomy_path)
         .select("canonical_skill", "alias", "category")
         .dropna()
         .withColumn("canonical_skill", _normalized(F.col("canonical_skill")))
