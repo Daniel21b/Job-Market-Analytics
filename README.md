@@ -2,8 +2,9 @@
 
 An asynchronous backend that turns unstructured job postings into queryable skill-demand metrics.
 The supported runtime uses Python, FastAPI, PySpark, PostgreSQL, Redis, Docker, and an AWS EMR
-Serverless execution adapter. The original notebooks and Streamlit dashboard remain in the
-repository as the legacy analysis surface and migration fixture.
+Serverless execution adapter. A Next.js, React and TypeScript dashboard in the portfolio repository
+displays audited aggregate snapshots. Original notebooks remain as historical analysis; the old
+Streamlit entry point links to the new dashboard.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white" alt="Python 3.11">
@@ -16,7 +17,7 @@ repository as the legacy analysis surface and migration fixture.
 </p>
 
 <p align="center">
-  <a href="https://job-market-analytics-fx.streamlit.app/"><strong>Legacy Streamlit dashboard</strong></a>
+  <a href="https://danielberhane.vercel.app/en/analytics"><strong>Interactive results dashboard</strong></a>
   ·
   <a href="https://daniel21b.github.io/Job-Market-Analytics/"><strong>Legacy analysis report</strong></a>
   ·
@@ -43,6 +44,9 @@ repository as the legacy analysis surface and migration fixture.
 - Repeatable Spark and API benchmark harnesses that write dated JSON evidence rather than embedding
   unverified resume metrics.
 
+- A public Next.js results explorer with skill/category/month filters, charts, tables, CSV export,
+  and downloadable aggregate evidence. See [frontend setup](QUICKSTART.md).
+
 ## Architecture
 
 ### Implemented local execution path
@@ -66,6 +70,12 @@ flowchart LR
     Publisher -->|"invalidate metric keys"| Cache[("Redis cache")]
     PG -->|"aggregate on cache miss"| API
     Cache <-->|"cache-aside responses"| API
+    Canonical --> Audit["Reconcile files + database"]
+    Matches --> Audit
+    PG --> Audit
+    Audit --> Export["Aggregate JSON exporter"]
+    Export --> UI["Next.js + React results dashboard"]
+    UI --> Visitor["Browser filters, charts and downloads"]
 ```
 
 The API and worker are deliberately separated. API requests stay lightweight while the worker owns

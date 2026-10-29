@@ -72,6 +72,11 @@ def main():
             "asOf": sample["source_as_of"],
             "country": "United States",
             "sampling": sample["selection"],
+            "statusCoverage": (
+                "Includes active and closed archived postings"
+                if sample.get("includes_closed_archive")
+                else "Active snapshot records"
+            ),
         },
         "metrics": {
             "inputRows": m["input_rows"],
@@ -96,6 +101,7 @@ def main():
             "Convenience sample; monthly source dates do not measure market-wide hiring growth.",
             "Country-only location; no city, salary or role-family breakdown is inferred.",
             "Skills overlap across postings; skill counts cannot be summed to count distinct jobs.",
+            "Alias matching can be ambiguous (for example, go); skill precision is not audited.",
             "Duplicate candidates are heuristic decisions, not audited true duplicates.",
             "Latency is local, sequential and cached; it is not a production SLA.",
         ],
