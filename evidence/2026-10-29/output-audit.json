@@ -1,0 +1,17 @@
+{
+  "reconciliation_passed": true,
+  "output_keys_disjoint": true,
+  "all_input_keys_accounted_for": true,
+  "input_rows": 500000,
+  "canonical_rows": 411135,
+  "duplicate_rows": 88865,
+  "duplicate_reasons": {
+    "exact_repost": 53763,
+    "near_repost": 35102
+  },
+  "database_counts": {
+    "job_postings": 411135,
+    "skills": 73,
+    "job_posting_skills": 156491
+  }
+}

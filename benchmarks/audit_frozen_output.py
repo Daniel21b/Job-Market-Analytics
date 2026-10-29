@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import hashlib
 import json
 from collections import Counter
 from pathlib import Path
@@ -14,7 +15,8 @@ parser.add_argument("--database-url", required=True)
 args = parser.parse_args()
 r = args.evidence
 o = args.output_dir
-m = json.loads((r / "run-completed.json").read_text())["metrics"]
+run = json.loads((r / "run-completed.json").read_text())
+m = run["metrics"]
 expected = json.loads((r / "sample-manifest.json").read_text())["selected_rows"]
 c = pq.read_table(o / "canonical_job_postings", columns=["posting_key"])
 d = pq.read_table(o / "duplicate_decisions", columns=["posting_key", "duplicate_reason"])
@@ -25,7 +27,17 @@ assert s.num_rows == m["skill_match_rows"]
 assert len(set(s["canonical_skill"].to_pylist())) == m["canonical_skill_count"]
 assert len(set(c["posting_key"].to_pylist())) == c.num_rows
 assert len(set(d["posting_key"].to_pylist())) == d.num_rows
-assert not set(c["posting_key"].to_pylist()) & set(d["posting_key"].to_pylist())
+canonical_keys = set(c["posting_key"].to_pylist())
+duplicate_keys = set(d["posting_key"].to_pylist())
+assert not canonical_keys & duplicate_keys
+raw = pq.read_table(run["input_uri"], columns=["source", "source_record_id"])
+input_keys = {
+    hashlib.sha256((source + "|" + source_id).encode()).hexdigest()
+    for source, source_id in zip(
+        raw["source"].to_pylist(), raw["source_record_id"].to_pylist(), strict=True
+    )
+}
+assert canonical_keys | duplicate_keys == input_keys
 
 
 async def check():
@@ -43,6 +55,8 @@ async def check():
 
 result = {
     "reconciliation_passed": True,
+    "output_keys_disjoint": True,
+    "all_input_keys_accounted_for": True,
     "input_rows": expected,
     "canonical_rows": c.num_rows,
     "duplicate_rows": d.num_rows,

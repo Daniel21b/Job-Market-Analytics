@@ -16,7 +16,7 @@ Run the pipeline and independently reconcile its files/database using `benchmark
 
 ```sh
 python benchmarks/export_dashboard_snapshot.py \
-  --evidence evidence/2026-10-28 \
+  --evidence evidence/2026-10-29 \
   --output-dir /path/to/completed/pipeline-output \
   --destination /path/to/Portfolio/src/data/analytics-snapshot.json
 ```

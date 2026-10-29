@@ -1,0 +1,17 @@
+{
+  "id": "9f90fed2-0aa7-44b0-aaea-784ba0f90500",
+  "status": "queued",
+  "input_uri": "/private/tmp/job-benchmark-data/postings-500000.parquet",
+  "output_uri": "/private/tmp/job-benchmark-output-500k-fixed",
+  "optimized": true,
+  "requested_at": "2026-10-29T14:24:02.111008Z",
+  "started_at": null,
+  "completed_at": null,
+  "input_rows": null,
+  "output_rows": null,
+  "duplicate_rows": null,
+  "skill_count": null,
+  "duration_ms": null,
+  "metrics": {},
+  "error": null
+}

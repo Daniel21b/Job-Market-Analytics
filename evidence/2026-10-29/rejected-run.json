@@ -1,0 +1,44 @@
+{
+  "id": "44831996-3dd4-42a4-a78f-1e3ca1377b41",
+  "status": "succeeded",
+  "input_uri": "/private/tmp/job-benchmark-data/postings-500000.parquet",
+  "output_uri": "/private/tmp/job-benchmark-output-500k",
+  "optimized": true,
+  "requested_at": "2026-10-29T04:03:10.326372Z",
+  "started_at": "2026-10-29T04:03:10.331226Z",
+  "completed_at": "2026-10-29T04:36:34.480755Z",
+  "input_rows": 500000,
+  "output_rows": 411129,
+  "duplicate_rows": 88866,
+  "skill_count": 73,
+  "duration_ms": 1929962,
+  "metrics": {
+    "optimized": true,
+    "input_rows": 500000,
+    "duration_ms": 1929962,
+    "output_rows": 411129,
+    "duplicate_rate": 0.177732,
+    "duplicate_rows": 88866,
+    "skill_match_rows": 156488,
+    "published_postings": 411129,
+    "canonical_skill_count": 73,
+    "configured_partitions": 8,
+    "cache_keys_invalidated": 0,
+    "partition_profile_after": {
+      "skew_ratio": 1.008,
+      "partition_count": 8,
+      "max_partition_rows": 51817,
+      "mean_partition_rows": 51391.125,
+      "non_empty_partitions": 8
+    },
+    "published_skill_matches": 156488,
+    "partition_profile_before": {
+      "skew_ratio": 1.057,
+      "partition_count": 200,
+      "max_partition_rows": 2643,
+      "mean_partition_rows": 2500.0,
+      "non_empty_partitions": 200
+    }
+  },
+  "error": null
+}

@@ -1,0 +1,9 @@
+{
+  "accepted": false,
+  "reason": "Timestamp ties were not stably ordered between output branches",
+  "canonical_rows": 411129,
+  "duplicate_rows": 88866,
+  "overlapping_keys": 2188,
+  "missing_input_keys": 2193,
+  "fix": "Stable posting_key tie-breaker, shared comparison results, disjoint-ID audit, and regression test"
+}
