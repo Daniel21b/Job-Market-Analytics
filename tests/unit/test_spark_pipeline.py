@@ -171,3 +171,30 @@ def test_bounded_duplicate_comparison_matches_unbounded_reference(spark: SparkSe
     observed = {r.source_record_id.split("-")[0]: r.similarity_score for r in resolved}
     assert observed == expected
     assert canonical.count() + len(resolved) == len(rows)
+
+
+@pytest.mark.spark
+def test_tied_timestamps_have_stable_disjoint_decisions(spark: SparkSession) -> None:
+    rows = [
+        {
+            "source": "tie",
+            "id": str(i),
+            "company": "Acme",
+            "role": "Engineer",
+            "location": "US",
+            "description": text,
+            "posting_date": "2026-01-01T00:00:00Z",
+            "observed_at": "2026-01-01T00:00:00Z",
+        }
+        for i, text in enumerate(["python " * 40, "python " * 40, "sql " * 70, "sql " * 70])
+    ]
+    results = []
+    for ordered, partitions in ((rows, 2), (list(reversed(rows)), 3)):
+        frame = canonicalize(spark.createDataFrame(ordered))
+        canonical, duplicates = classify_duplicates(frame, PipelineConfig(partitions=partitions))
+        kept = {r.posting_key for r in canonical.select("posting_key").collect()}
+        removed = {r.posting_key for r in duplicates.select("posting_key").collect()}
+        assert not kept & removed
+        assert kept | removed == {r.posting_key for r in frame.select("posting_key").collect()}
+        results.append((kept, removed))
+    assert results[0] == results[1]

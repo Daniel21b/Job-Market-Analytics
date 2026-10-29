@@ -17,13 +17,15 @@ o = args.output_dir
 m = json.loads((r / "run-completed.json").read_text())["metrics"]
 expected = json.loads((r / "sample-manifest.json").read_text())["selected_rows"]
 c = pq.read_table(o / "canonical_job_postings", columns=["posting_key"])
-d = pq.read_table(o / "duplicate_decisions", columns=["duplicate_reason"])
+d = pq.read_table(o / "duplicate_decisions", columns=["posting_key", "duplicate_reason"])
 s = pq.read_table(o / "job_skill_matches", columns=["canonical_skill"])
 assert c.num_rows + d.num_rows == m["input_rows"] == expected
 assert c.num_rows == m["output_rows"] and d.num_rows == m["duplicate_rows"]
 assert s.num_rows == m["skill_match_rows"]
 assert len(set(s["canonical_skill"].to_pylist())) == m["canonical_skill_count"]
 assert len(set(c["posting_key"].to_pylist())) == c.num_rows
+assert len(set(d["posting_key"].to_pylist())) == d.num_rows
+assert not set(c["posting_key"].to_pylist()) & set(d["posting_key"].to_pylist())
 
 
 async def check():

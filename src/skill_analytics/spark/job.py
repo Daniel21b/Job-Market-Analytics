@@ -65,6 +65,8 @@ def execute(
 
         output_rows = canonical.count()
         duplicate_rows = duplicates.count()
+        if output_rows + duplicate_rows != input_rows:
+            raise ValueError("Canonical and duplicate counts do not reconcile with input")
         skill_matches = skills.count()
         canonical_skill_count = skills.select("canonical_skill").distinct().count()
         after_profile = partition_profile(canonical)

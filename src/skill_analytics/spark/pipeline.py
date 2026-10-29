@@ -159,7 +159,9 @@ def classify_duplicates(frame: DataFrame, config: PipelineConfig) -> tuple[DataF
         current = current.repartition(config.partitions, "composite_join_key")
 
     history = Window.partitionBy("composite_join_key").orderBy(
-        F.col("posted_at").asc_nulls_last(), F.col("observed_at").asc()
+        F.col("posted_at").asc_nulls_last(),
+        F.col("observed_at").asc(),
+        F.col("posting_key").asc(),
     )
     compared = (
         current.withColumn("previous_posting_key", F.lag("posting_key").over(history))
@@ -213,6 +215,9 @@ def classify_duplicates(frame: DataFrame, config: PipelineConfig) -> tuple[DataF
             ),
         )
     )
+
+    # Both output branches must reuse the same expensive, deterministically ordered decisions.
+    compared = compared.persist()
 
     delivery_duplicates = deliveries.filter(F.col("delivery_rank") > 1).select(
         "posting_key",
