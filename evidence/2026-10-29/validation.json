@@ -14,7 +14,8 @@
     "production_build": "passed",
     "typescript": "passed",
     "targeted_eslint": "passed",
-    "desktop_mobile_controls": "Passed with prior audited 200K snapshot; final snapshot recheck pending"
+    "desktop_mobile_controls": "Passed against final audited 500K snapshot on production server: search, date/category filters, chart/table views, CSV/JSON downloads, active/archived disclosure, no JavaScript errors",
+    "production_preview_port": 3008
   },
   "external_design_evaluation": "Unavailable: selected provider models unsupported by account; direct browser verification completed"
 }
