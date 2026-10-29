@@ -1,5 +1,7 @@
 # Tech Skill Demand Platform — Upgrade Plan
 
+> Historical proposal, not the implemented architecture. The supported FastAPI/PySpark/PostgreSQL/Redis pipeline and Next.js results UI are documented in the [README](../README.md) and [quickstart](../QUICKSTART.md). Airbyte, BigQuery, dbt and Airflow below remain proposals.
+
 ## Objective
 
 Replace the notebook/CSV implementation in `Job-Market-Analytics` with an auditable ELT platform built around Airbyte, BigQuery, PySpark, dbt, Airflow, and Docker. Preserve useful parsing and taxonomy logic, but do not publish the proposed resume metrics until dated run artifacts prove each one.

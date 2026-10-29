@@ -1,111 +1,28 @@
-# 🚀 Streamlit Quick Start Guide
+# Explore the results
 
-## Run Your Dashboard Locally
+The primary frontend is a **Next.js / React / TypeScript dashboard**:
 
-```bash
-# Step 1: Activate your virtual environment
-source env/bin/activate  # macOS/Linux
-# OR
-env\Scripts\activate     # Windows
+[Open Job Market Observatory](https://danielberhane.vercel.app/en/analytics)
 
-# Step 2: Install new Streamlit dependencies
-pip install -r requirements.txt
+Explore skill rankings, date/category filters, monthly distributions and aggregate exports. The data is a dated, verified snapshot with active and archived postings, not a feed of currently open jobs.
 
-# Step 3: Run your dashboard
-streamlit run dashboard.py
+## Run the frontend locally
+
+The frontend lives in the [Portfolio repository](https://github.com/Daniel21b/Portfolio), under `src/app/[locale]/analytics` and `src/components/analytics-dashboard`. Clone that repository, run `npm ci`, then `npm run dev` and open `/en/analytics`.
+
+## Update the data
+
+Run the pipeline and independently reconcile its files/database using `benchmarks/audit_frozen_output.py`, then measure the API. Export only aggregates:
+
+```sh
+python benchmarks/export_dashboard_snapshot.py \
+  --evidence evidence/2026-10-29 \
+  --output-dir /path/to/completed/pipeline-output \
+  --destination /path/to/Portfolio/src/data/analytics-snapshot.json
 ```
 
-Your dashboard will open automatically at **http://localhost:8501** 🎉
+The exporter requires a successful, audited run and checks totals. No descriptions or connection credentials are published. The frontend does not expose the processing API or connect directly to PostgreSQL.
 
----
+## Legacy Streamlit URL
 
-## 📁 What Was Created
-
-```
-Job-Market-Analytics/
-├── 📊 dashboard.py                    # ← YOUR EMPTY STREAMLIT APP (ready for code!)
-├── 📁 .streamlit/
-│   └── config.toml                    # Streamlit theme & settings
-├── 📋 requirements.txt                # Updated with Streamlit dependencies
-├── 🔧 .gitignore                      # Git ignore for Streamlit cache
-├── 🚀 Procfile                        # For Heroku deployment
-├── ⚙️  setup.sh                        # Setup script for cloud deployment
-├── 📖 STREAMLIT_DEPLOYMENT.md         # Full deployment guide
-└── 📖 QUICKSTART.md                   # This file!
-```
-
----
-
-## ✅ Next Steps
-
-### 1. Build Your Dashboard
-Open `dashboard.py` and start coding! Here's a starter template:
-
-```python
-import streamlit as st
-import pandas as pd
-
-st.title("🔍 Job Market Analytics Dashboard")
-
-# Load your data
-df = pd.read_csv("notebooks/data/processed/jobs_cleaned.csv")
-
-# Display insights
-st.write(f"Total Jobs Analyzed: {len(df):,}")
-st.dataframe(df.head())
-```
-
-### 2. Test Locally
-```bash
-streamlit run dashboard.py
-```
-
-### 3. Deploy to Cloud
-Choose your platform:
-- **Streamlit Cloud** (Easiest): [share.streamlit.io](https://share.streamlit.io)
-- **Heroku**: Use the included `Procfile`
-- **Docker**: See `STREAMLIT_DEPLOYMENT.md`
-
----
-
-## 🎨 Customize Your Theme
-
-Edit `.streamlit/config.toml`:
-```toml
-[theme]
-primaryColor = "#0052CC"        # Change to your brand color
-backgroundColor = "#FFFFFF"
-textColor = "#262730"
-```
-
----
-
-## 📚 Helpful Resources
-
-- [Streamlit Docs](https://docs.streamlit.io)
-- [Streamlit Gallery](https://streamlit.io/gallery)
-- [Plotly Charts](https://plotly.com/python/)
-
----
-
-## 🐛 Common Issues
-
-**Port already in use?**
-```bash
-streamlit run dashboard.py --server.port=8502
-```
-
-**Module not found?**
-```bash
-pip install -r requirements.txt --upgrade
-```
-
-**Need to clear cache?**
-```bash
-streamlit cache clear
-```
-
----
-
-**Happy coding! 🎉**
-
+`app.py` now links to the new application; it no longer renders synthetic fallback results. The compatibility `Procfile` launches this notice. The previously documented `dashboard.py` was absent and is not a supported command. Historical Streamlit code remains in Git history.

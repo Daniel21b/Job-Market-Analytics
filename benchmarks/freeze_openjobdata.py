@@ -20,11 +20,23 @@ def sha(path):
     return digest.hexdigest()
 
 
+def timestamp(value):
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if not isinstance(value, datetime):
+        return None
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--data-dir", type=Path, required=True)
     parser.add_argument("--target", type=int, default=120000)
+    parser.add_argument("--include-closed", action="store_true")
     args = parser.parse_args()
     args.data_dir.mkdir(parents=True, exist_ok=True)
     meta = json.loads((args.evidence / "source-revision.json").read_text())
@@ -32,10 +44,26 @@ def main():
     as_of = datetime.fromisoformat(manifest["active"]["as_of"])
     counts, years = Counter(), Counter()
     selected, used, ids = [], [], set()
-    for _, entry in sorted(
-        manifest["active"]["minimal"]["shards"].items(), key=lambda x: int(x[0])
-    ):
-        path = args.data_dir / Path(entry["path"]).name
+    entries = [
+        entry
+        for _, entry in sorted(
+            manifest["active"]["minimal"]["shards"].items(), key=lambda x: int(x[0])
+        )
+    ]
+    if args.include_closed:
+        archive = json.loads((args.evidence / "closed-source-manifest.json").read_text())
+        if archive["revision"] != meta["revision"]:
+            raise ValueError("Closed archive revision must match active snapshot")
+        entries.extend(archive["shards"])
+    status_counts = Counter()
+    for entry in entries:
+        is_closed = entry["path"].startswith("data/closed/")
+        filename = (
+            hashlib.sha256(entry["path"].encode()).hexdigest() + ".parquet"
+            if is_closed
+            else Path(entry["path"]).name
+        )
+        path = args.data_dir / filename
         url = f"https://huggingface.co/datasets/{meta['dataset']}/resolve/{meta['revision']}/{entry['path']}"
         if not path.exists():
             with urlopen(url, timeout=120) as src, path.open("wb") as dst:
@@ -53,7 +81,7 @@ def main():
             if len(description) < 200:
                 counts["short_or_missing_description"] += 1
                 continue
-            posted = row.get("posted_at")
+            posted = timestamp(row.get("posted_at"))
             if not posted or not datetime(2025, 1, 1, tzinfo=UTC) <= posted <= as_of:
                 counts["outside_date_range_or_missing"] += 1
                 continue
@@ -63,8 +91,13 @@ def main():
             if row["posting_id"] in ids:
                 counts["repeated_source_id"] += 1
                 continue
+            observed = timestamp(row.get("first_seen_at"))
+            if observed is None:
+                counts["missing_observation_time"] += 1
+                continue
             ids.add(row["posting_id"])
             years[str(posted.year)] += 1
+            status_counts["closed" if is_closed else "active"] += 1
             selected.append(
                 {
                     "source": "openjobdata",
@@ -76,7 +109,7 @@ def main():
                     "location": "United States",
                     "description": description,
                     "source_posted_at": posted.isoformat(),
-                    "observed_at": row["first_seen_at"].isoformat(),
+                    "observed_at": observed.isoformat(),
                     "is_remote": bool(row.get("is_remote")),
                 }
             )
@@ -99,7 +132,8 @@ def main():
         "frozen_at": datetime.now(UTC).isoformat(),
         "source_as_of": as_of.isoformat(),
         "selection": (
-            "Numeric shard order, original row order, stop at target; convenience sample, not"
+            "Active shards in numeric order, then closed archive in reverse path order when "
+            "enabled; original row order; stop at target. Convenience sample, not"
             " representative."
         ),
         "filters": (
@@ -120,6 +154,8 @@ def main():
             "future dates or synthetic records included."
         ),
         "selected_rows": len(selected),
+        "selected_source_status": dict(status_counts),
+        "includes_closed_archive": args.include_closed,
         "selected_posted_years": dict(years),
         "filter_counts": dict(counts),
         "shards": used,

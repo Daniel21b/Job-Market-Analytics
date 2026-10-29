@@ -1,0 +1,21 @@
+{
+  "unit_and_spark_tests": {
+    "passed": 14,
+    "log": "local /private/tmp/500k-fixed-tests.log",
+    "includes": "stable tied-timestamp decisions across reversed input and changed partition count"
+  },
+  "service_integration_tests": {
+    "passed": 1,
+    "database": "skill_benchmark_500k",
+    "redis_namespace": 4
+  },
+  "ruff": "passed",
+  "frontend": {
+    "production_build": "passed",
+    "typescript": "passed",
+    "targeted_eslint": "passed",
+    "desktop_mobile_controls": "Passed against final audited 500K snapshot on production server: search, date/category filters, chart/table views, CSV/JSON downloads, active/archived disclosure, no JavaScript errors",
+    "production_preview_port": 3008
+  },
+  "external_design_evaluation": "Unavailable: selected provider models unsupported by account; direct browser verification completed"
+}

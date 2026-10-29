@@ -2,8 +2,9 @@
 
 An asynchronous backend that turns unstructured job postings into queryable skill-demand metrics.
 The supported runtime uses Python, FastAPI, PySpark, PostgreSQL, Redis, Docker, and an AWS EMR
-Serverless execution adapter. The original notebooks and Streamlit dashboard remain in the
-repository as the legacy analysis surface and migration fixture.
+Serverless execution adapter. A Next.js, React and TypeScript dashboard in the portfolio repository
+displays audited aggregate snapshots. Original notebooks remain as historical analysis; the old
+Streamlit entry point links to the new dashboard.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white" alt="Python 3.11">
@@ -16,7 +17,7 @@ repository as the legacy analysis surface and migration fixture.
 </p>
 
 <p align="center">
-  <a href="https://job-market-analytics-fx.streamlit.app/"><strong>Legacy Streamlit dashboard</strong></a>
+  <a href="https://danielberhane.vercel.app/en/analytics"><strong>Interactive results dashboard</strong></a>
   ·
   <a href="https://daniel21b.github.io/Job-Market-Analytics/"><strong>Legacy analysis report</strong></a>
   ·
@@ -43,6 +44,9 @@ repository as the legacy analysis surface and migration fixture.
 - Repeatable Spark and API benchmark harnesses that write dated JSON evidence rather than embedding
   unverified resume metrics.
 
+- A public Next.js results explorer with skill/category/month filters, charts, tables, CSV export,
+  and downloadable aggregate evidence. See [frontend setup](QUICKSTART.md).
+
 ## Architecture
 
 ### Implemented local execution path
@@ -66,6 +70,12 @@ flowchart LR
     Publisher -->|"invalidate metric keys"| Cache[("Redis cache")]
     PG -->|"aggregate on cache miss"| API
     Cache <-->|"cache-aside responses"| API
+    Canonical --> Audit["Reconcile files + database"]
+    Matches --> Audit
+    PG --> Audit
+    Audit --> Export["Aggregate JSON exporter"]
+    Export --> UI["Next.js + React results dashboard"]
+    UI --> Visitor["Browser filters, charts and downloads"]
 ```
 
 The API and worker are deliberately separated. API requests stay lightweight while the worker owns
@@ -346,9 +356,11 @@ python benchmarks/run_api_benchmark.py \
 
 ## October 2026 real-posting benchmark
 
-The expanded actual pipeline run processed **200,000 real postings**, retained **174,361** canonical records, flagged **25,639 heuristic duplicate candidates (12.82%)**, and produced **66,339 matches across 73 skills**. Python-skill HTTP requests measured **0.833 ms warm-cache p95** (1,000 sequential requests) and **11.309 ms cache-miss p95** (100 requests) locally. Unfiltered cache misses measured **52.090 ms p95**; a blanket sub-50 ms guarantee is not supported.
+The actual pipeline processed **500,000 unique real source posting records**, retained **411,135** canonical postings, flagged **88,865 heuristic duplicate candidates (17.77%)**, and produced **156,491 relationships across 73 matched skills**. The sample combines 442,966 active-snapshot records and 57,034 archived closed records; it does not represent 500,000 currently open vacancies.
 
-[Read the expanded benchmark and reproduction instructions](docs/BENCHMARK_2026-10-26.md). The [original 120,000-record run](docs/BENCHMARK_2026-10-25.md) is preserved. These overlapping samples contain 200,000 unique source IDs in total, not 320,000. Original project dates and October follow-up measurements remain separate.
+[Explore the Next.js results dashboard](https://danielberhane.vercel.app/en/analytics) or [read the benchmark and reproduction instructions](docs/BENCHMARK_2026-10-29.md). Python-skill HTTP queries measured **0.738 ms warm-cache p95** across 1,000 sequential local requests. Unfiltered cache misses measured **149.667 ms p95**. These are local observations, not production guarantees.
+
+The [120,000-record](docs/BENCHMARK_2026-10-25.md) and [200,000-record](docs/BENCHMARK_2026-10-26.md) runs are preserved as historical evidence. Their records overlap with this sample and are not added to the 500,000 total. Original development dates and October 2026 follow-up measurements remain separate.
 
 ## Historical fixture result
 
@@ -372,11 +384,11 @@ Full environment and measurement details are recorded in
 
 | Proposed result | Required evidence | Current status |
 |---|---|---|
-| 120,000+ postings | Immutable input manifest and reconciled input/output counts | Measured 200,000 real input records in October 2026 |
-| 18% repost removal | Persisted duplicate decisions with an explicit denominator | Not supported: 25,639 of 200,000 candidates (12.82%) |
+| 120,000+ postings | Immutable input manifest and reconciled input/output counts | Measured 500,000 real input records in October 2026 |
+| 18% repost removal | Persisted duplicate decisions with an explicit denominator | Not supported: 88,865 of 500,000 candidates (17.77%) |
 | 500+ skills | Versioned taxonomy and distinct matched canonical-skill count | Not supported: 73 matched skills |
-| 40 to 12 minutes | Five or more same-input baseline/optimized runs | Not measured; October Spark run took 1,130.362 seconds |
-| Sub-50 ms filters | Warm-cache p95 against populated tables | Met locally for Python skill: 0.833 ms p95 over 1,000 cache hits |
+| 40 to 12 minutes | Five or more same-input baseline/optimized runs | Not measured; October Spark run took 585.748 seconds |
+| Sub-50 ms filters | Warm-cache p95 against populated tables | Met locally for Python skill: 0.738 ms p95 over 1,000 cache hits |
 
 Use measured values when they differ from proposed resume language.
 

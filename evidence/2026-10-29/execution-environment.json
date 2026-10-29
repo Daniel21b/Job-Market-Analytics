@@ -1,0 +1,11 @@
+{
+  "pipeline_commit": "be5c3d7e7f59269316b8b03664d7ed7ffc8aab68",
+  "spark_master": "local[6]",
+  "partitions": 8,
+  "driver_memory": "6g",
+  "database": "isolated skill_benchmark_500k_fixed",
+  "api_port": 8042,
+  "redis_database": 5,
+  "worker_configured_partitions": 8,
+  "partition_note": "API and worker configured for eight partitions on the completed-run attempt."
+}
